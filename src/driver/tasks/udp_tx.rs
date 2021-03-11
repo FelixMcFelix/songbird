@@ -1,5 +1,5 @@
 use super::message::*;
-use crate::constants::*;
+use crate::{constants::*, driver::stats::*};
 use discortp::discord::MutableKeepalivePacket;
 use flume::Receiver;
 use std::sync::Arc;
@@ -65,6 +65,7 @@ impl UdpTx {
 #[cfg(not(feature = "tokio-02-marker"))]
 #[instrument(skip(udp_msg_rx))]
 pub(crate) async fn runner(udp_msg_rx: Receiver<UdpTxMessage>, ssrc: u32, udp_tx: Arc<UdpSocket>) {
+    let _t = UdpTxTaskToken::new();
     info!("UDP transmit handle started.");
 
     let mut txer = UdpTx {
@@ -81,6 +82,7 @@ pub(crate) async fn runner(udp_msg_rx: Receiver<UdpTxMessage>, ssrc: u32, udp_tx
 #[cfg(feature = "tokio-02-marker")]
 #[instrument(skip(udp_msg_rx))]
 pub(crate) async fn runner(udp_msg_rx: Receiver<UdpTxMessage>, ssrc: u32, udp_tx: SendHalf) {
+    let _t = UdpTxTaskToken::new();
     info!("UDP transmit handle started.");
 
     let mut txer = UdpTx {

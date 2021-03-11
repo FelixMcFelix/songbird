@@ -78,7 +78,7 @@ impl TypeMapKey for SoundStore {
 }
 
 #[group]
-#[commands(deafen, join, leave, mute, ting, undeafen, unmute)]
+#[commands(deafen, join, leave, mute, ting, undeafen, unmute, thread_stats)]
 struct General;
 
 #[tokio::main]
@@ -382,6 +382,13 @@ async fn unmute(ctx: &Context, msg: &Message) -> CommandResult {
     } else {
         check_msg(msg.channel_id.say(&ctx.http, "Not in a voice channel to unmute in").await);
     }
+
+    Ok(())
+}
+
+#[command]
+async fn thread_stats(ctx: &Context, msg: &Message, _args: Args) -> CommandResult {
+    songbird::driver::stats::global_songbird_tasks();
 
     Ok(())
 }

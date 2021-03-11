@@ -4,7 +4,7 @@ use super::{
 };
 use crate::{
     constants::*,
-    driver::{Config, DecodeMode},
+    driver::{stats::*, Config, DecodeMode},
     events::CoreContext,
 };
 use audiopus::{
@@ -401,6 +401,7 @@ pub(crate) async fn runner(
     config: Config,
     udp_socket: Arc<UdpSocket>,
 ) {
+    let _t = UdpRxTaskToken::new();
     info!("UDP receive handle started.");
 
     let mut state = UdpRx {
@@ -426,6 +427,7 @@ pub(crate) async fn runner(
     config: Config,
     udp_socket: RecvHalf,
 ) {
+    let _t = UdpRxTaskToken::new();
     info!("UDP receive handle started.");
 
     let mut state = UdpRx {

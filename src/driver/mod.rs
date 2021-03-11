@@ -15,6 +15,7 @@ mod config;
 pub(crate) mod connection;
 mod crypto;
 mod decode_mode;
+pub mod stats;
 pub(crate) mod tasks;
 
 pub use config::Config;

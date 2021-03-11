@@ -1,5 +1,6 @@
 use super::message::*;
 use crate::{
+    driver::stats::*,
     events::CoreContext,
     model::{
         payload::{Heartbeat, Speaking},
@@ -218,6 +219,7 @@ pub(crate) async fn runner(
     ssrc: u32,
     heartbeat_interval: f64,
 ) {
+    let _t = WsTaskToken::new();
     info!("WS thread started.");
     let mut aux = AuxNetwork::new(evt_rx, ws_client, ssrc, heartbeat_interval);
 

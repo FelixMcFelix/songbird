@@ -11,6 +11,7 @@ pub(crate) mod ws;
 
 use super::{
     connection::{error::Error as ConnectionError, Connection},
+    stats::*,
     Config,
 };
 use crate::events::CoreContext;
@@ -24,6 +25,7 @@ use tracing::{error, info, instrument};
 
 pub(crate) fn start(config: Config, rx: Receiver<CoreMessage>, tx: Sender<CoreMessage>) {
     spawn(async move {
+        let _t = CoreTaskToken::new();
         info!("Driver started.");
         runner(config, rx, tx).await;
         info!("Driver finished.");

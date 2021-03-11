@@ -1,5 +1,6 @@
 use super::message::*;
 use crate::{
+    driver::stats::*,
     events::{EventStore, GlobalEvents, TrackEvent},
     tracks::{TrackHandle, TrackState},
 };
@@ -8,6 +9,7 @@ use tracing::{debug, info, instrument, trace};
 
 #[instrument(skip(_interconnect, evt_rx))]
 pub(crate) async fn runner(_interconnect: Interconnect, evt_rx: Receiver<EventMessage>) {
+    let _t = EventTaskToken::new();
     let mut global = GlobalEvents::default();
 
     let mut events: Vec<EventStore> = vec![];

@@ -1,6 +1,7 @@
 use super::{disposal, error::Result, message::*, Config};
 use crate::{
     constants::*,
+    driver::stats::*,
     tracks::{PlayMode, Track},
 };
 use audiopus::{
@@ -587,6 +588,7 @@ pub(crate) fn runner(
     async_handle: Handle,
     config: Config,
 ) {
+    let _t = MixerTaskToken::new();
     let mut mixer = Mixer::new(mix_rx, async_handle, interconnect, config);
 
     mixer.run();
