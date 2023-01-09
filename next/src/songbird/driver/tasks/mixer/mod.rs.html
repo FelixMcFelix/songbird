@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `src/driver/tasks/mixer/mod.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>mod.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../static.files/SourceSerif4-Regular-1f7d512b176f0f72.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../static.files/SourceSerif4-Bold-124a1ca42af929b6.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../../../static.files/rustdoc-918aaffdca2f1bdb.css" id="mainThemeStyle"><link rel="stylesheet" id="themeStyle" href="../../../../../static.files/light-ebce58d0a40c3431.css"><link rel="stylesheet" disabled href="../../../../../static.files/dark-f23faae4a2daf9a6.css"><link rel="stylesheet" disabled href="../../../../../static.files/ayu-94f39d4346842c1e.css"><script id="default-settings" ></script><script src="../../../../../static.files/storage-d43fa987303ecbbb.js"></script><script defer src="../../../../../static.files/source-script-5cf2e01a42cc9858.js"></script><script defer src="../../../../../source-files.js"></script><script defer src="../../../../../static.files/main-a211dbb005fb8161.js"></script><noscript><link rel="stylesheet" href="../../../../../static.files/noscript-13285aec31fa243e.css"></noscript><link rel="icon" href="https://raw.githubusercontent.com/serenity-rs/songbird/current/songbird-ico.png"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><div class="width-limiter"><nav class="sub"><a class="sub-logo-container" href="../../../../../songbird/index.html">
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `src/driver/tasks/mixer/mod.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>mod.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../static.files/SourceSerif4-Regular-1f7d512b176f0f72.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../static.files/SourceSerif4-Bold-124a1ca42af929b6.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../../../static.files/rustdoc-f0e60a452d3144ec.css" id="mainThemeStyle"><link rel="stylesheet" id="themeStyle" href="../../../../../static.files/light-4743e13df3dfe8c4.css"><link rel="stylesheet" disabled href="../../../../../static.files/dark-0e1b889528bd466b.css"><link rel="stylesheet" disabled href="../../../../../static.files/ayu-65289d5d067c7c66.css"><script id="default-settings" ></script><script src="../../../../../static.files/storage-d43fa987303ecbbb.js"></script><script defer src="../../../../../static.files/source-script-ea63cb6500f71309.js"></script><script defer src="../../../../../source-files.js"></script><script defer src="../../../../../static.files/main-bc1b32400f872ddb.js"></script><noscript><link rel="stylesheet" href="../../../../../static.files/noscript-13285aec31fa243e.css"></noscript><link rel="icon" href="https://raw.githubusercontent.com/serenity-rs/songbird/current/songbird-ico.png"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><a class="sub-logo-container" href="../../../../../songbird/index.html">
                         <img src="https://raw.githubusercontent.com/serenity-rs/songbird/current/songbird.png" alt="logo"></a><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../../../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../../../static.files/wheel-5ec35bf9ca753509.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
@@ -977,11 +977,6 @@
 <a href="#976" id="976">976</a>
 <a href="#977" id="977">977</a>
 <a href="#978" id="978">978</a>
-<a href="#979" id="979">979</a>
-<a href="#980" id="980">980</a>
-<a href="#981" id="981">981</a>
-<a href="#982" id="982">982</a>
-<a href="#983" id="983">983</a>
 </pre><pre class="rust"><code><span class="kw">pub mod </span>mix_logic;
 <span class="kw">mod </span>pool;
 <span class="kw">mod </span>result;
@@ -1584,8 +1579,6 @@
     }
 
     <span class="kw">pub fn </span>cycle(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
-        <span class="kw">let </span><span class="kw-2">mut </span>softclip_buffer = [<span class="number">0f32</span>; STEREO_FRAME_SIZE];
-
         <span class="comment">// symph_mix is an `AudioBuffer` (planar format), we need to convert this
         // later into an interleaved `SampleBuffer` for libopus.
         </span><span class="self">self</span>.symph_mix.clear();
@@ -1643,33 +1636,18 @@
                     <span class="prelude-val">None </span>=&gt; {},
                 }
 
+                <span class="self">self</span>.advance_rtp_timestamp();
+
                 <span class="kw">return </span><span class="prelude-val">Ok</span>(());
             }
         } <span class="kw">else </span>{
             <span class="self">self</span>.silence_frames = <span class="number">5</span>;
 
             <span class="kw">if let </span>MixType::MixedPcm(n) = mix_len {
-                <span class="attr">#[cfg(test)]
-                </span><span class="kw">let </span>do_copy = <span class="bool-val">true</span>;
-                <span class="attr">#[cfg(not(test))]
-                </span><span class="kw">let </span>do_copy = <span class="self">self</span>.config.use_softclip;
-
-                <span class="kw">if </span>do_copy {
-                    <span class="comment">// to apply soft_clip, we need this to be in a normal f32 buffer.
-                    // unfortunately, SampleBuffer does not expose a `.samples_mut()`.
-                    // hence, an extra copy...
-                    //
-                    // also just copy in for #[cfg(test)] to simplify the below logic
-                    // for handing out audio data to the outside world.
-                    </span><span class="kw">let </span>samples_to_copy = <span class="self">self</span>.config.mix_mode.channels() * n;
-
-                    softclip_buffer[..samples_to_copy]
-                        .copy_from_slice(<span class="kw-2">&amp;</span><span class="self">self</span>.sample_buffer.samples()[..samples_to_copy]);
-                }
-
                 <span class="kw">if </span><span class="self">self</span>.config.use_softclip {
                     <span class="self">self</span>.soft_clip.apply(
-                        (<span class="kw-2">&amp;mut </span>softclip_buffer[..])
+                        (<span class="kw-2">&amp;mut </span><span class="self">self</span>.sample_buffer.samples_mut()
+                            [..n * <span class="self">self</span>.config.mix_mode.channels()])
                             .try_into()
                             .expect(<span class="string">&quot;Mix buffer is known to have a valid sample count (softclip).&quot;</span>),
                     )<span class="question-mark">?</span>;
@@ -1684,8 +1662,6 @@
         <span class="comment">// Wait till the right time to send this packet:
         // usually a 20ms tick, in test modes this is either a finite number of runs or user input.
         </span><span class="self">self</span>.march_deadline();
-
-        <span class="kw">let </span>send_buffer = <span class="self">self</span>.config.use_softclip.then(|| <span class="kw-2">&amp;</span>softclip_buffer[..]);
 
         <span class="attr">#[cfg(test)]
         </span><span class="kw">let </span>send_status = <span class="kw">if let </span><span class="prelude-val">Some</span>(OutputMode::Raw(tx)) = <span class="kw-2">&amp;</span><span class="self">self</span>.config.override_connection {
@@ -1702,7 +1678,8 @@
                     OutputMessage::Passthrough(opus_frame)
                 },
                 MixType::MixedPcm(<span class="kw">_</span>) =&gt; OutputMessage::Mixed(
-                    softclip_buffer[..<span class="self">self</span>.config.mix_mode.sample_count_in_frame()].to_vec(),
+                    <span class="self">self</span>.sample_buffer.samples()[..<span class="self">self</span>.config.mix_mode.sample_count_in_frame()]
+                        .to_vec(),
                 ),
             };
 
@@ -1710,11 +1687,11 @@
 
             <span class="prelude-val">Ok</span>(())
         } <span class="kw">else </span>{
-            <span class="self">self</span>.prep_and_send_packet(send_buffer, mix_len)
+            <span class="self">self</span>.prep_and_send_packet(mix_len)
         };
 
         <span class="attr">#[cfg(not(test))]
-        </span><span class="kw">let </span>send_status = <span class="self">self</span>.prep_and_send_packet(send_buffer, mix_len);
+        </span><span class="kw">let </span>send_status = <span class="self">self</span>.prep_and_send_packet(mix_len);
 
         send_status.or_else(Error::disarm_would_block)<span class="question-mark">?</span>;
 
@@ -1735,8 +1712,9 @@
     }
 
     <span class="attr">#[inline]
-    </span><span class="kw">fn </span>prep_and_send_packet(<span class="kw-2">&amp;mut </span><span class="self">self</span>, buffer: <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>[f32]&gt;, mix_len: MixType) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
-        <span class="kw">let </span>send_buffer = buffer.unwrap_or_else(|| <span class="self">self</span>.sample_buffer.samples());
+    </span><span class="kw">fn </span>prep_and_send_packet(<span class="kw-2">&amp;mut </span><span class="self">self</span>, mix_len: MixType) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
+        <span class="kw">let </span>send_buffer = <span class="self">self</span>.sample_buffer.samples();
+
         <span class="kw">let </span>conn = <span class="self">self
             </span>.conn_active
             .as_mut()
@@ -1809,6 +1787,18 @@
                 (Blame: VOICE_PACKET_MAX?)&quot;</span>,
         );
         rtp.set_sequence(rtp.get_sequence() + <span class="number">1</span>);
+        rtp.set_timestamp(rtp.get_timestamp() + MONO_FRAME_SIZE <span class="kw">as </span>u32);
+    }
+
+    <span class="attr">#[inline]
+    </span><span class="comment">// Even if we don&#39;t send a packet, we *do* need to keep advancing the timestamp
+    // to make it easier for a receiver to reorder packets and compute jitter measures
+    // wrt. our clock difference vs. theirs.
+    </span><span class="kw">fn </span>advance_rtp_timestamp(<span class="kw-2">&amp;mut </span><span class="self">self</span>) {
+        <span class="kw">let </span><span class="kw-2">mut </span>rtp = MutableRtpPacket::new(<span class="kw-2">&amp;mut </span><span class="self">self</span>.packet[..]).expect(
+            <span class="string">&quot;FATAL: Too few bytes in self.packet for RTP header.\
+                (Blame: VOICE_PACKET_MAX?)&quot;</span>,
+        );
         rtp.set_timestamp(rtp.get_timestamp() + MONO_FRAME_SIZE <span class="kw">as </span>u32);
     }
 
@@ -1966,4 +1956,4 @@
     Mixer::new(mix_rx, async_handle, interconnect, config).run();
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../../../../" data-static-root-path="../../../../../static.files/" data-current-crate="songbird" data-themes="" data-resource-suffix="" data-rustdoc-version="1.68.0-nightly (b70baa4f9 2022-12-14)" data-search-js="search-444266647c4dba98.js" data-settings-js="settings-bebeae96e00e4617.js" data-settings-css="settings-af96d9e2fc13e081.css" ></div></body></html>
+</section></main><div id="rustdoc-vars" data-root-path="../../../../../" data-static-root-path="../../../../../static.files/" data-current-crate="songbird" data-themes="" data-resource-suffix="" data-rustdoc-version="1.68.0-nightly (ee0412d1e 2023-01-07)" data-search-js="search-181581080540673f.js" data-settings-js="settings-bebeae96e00e4617.js" data-settings-css="settings-58836c674e2f7bd2.css" ></div></body></html>
