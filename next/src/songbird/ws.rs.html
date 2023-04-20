@@ -114,9 +114,6 @@
 <a href="#114" id="114">114</a>
 <a href="#115" id="115">115</a>
 <a href="#116" id="116">116</a>
-<a href="#117" id="117">117</a>
-<a href="#118" id="118">118</a>
-<a href="#119" id="119">119</a>
 </pre></div><pre class="rust"><code><span class="kw">use crate</span>::{error::JsonError, model::Event};
 
 <span class="kw">use </span>futures::{SinkExt, StreamExt, TryStreamExt};
@@ -213,19 +210,16 @@
     <span class="prelude-val">Ok</span>(<span class="kw">match </span>message {
         <span class="comment">// SAFETY:
         // simd-json::serde::from_str may leave an &amp;mut str in a non-UTF state on failure.
-        // The below is safe as we have taken ownership of the inner `String`, and don&#39;t
-        // access it as a `str`/`String` or return it if failure occurs.
+        // The below is safe as we have taken ownership of the inner `String`, and if
+        // failure occurs we forcibly re-validate its contents before logging.
         </span><span class="prelude-val">Some</span>(Message::Text(<span class="kw-2">mut </span>payload)) =&gt;
-            <span class="kw">match unsafe </span>{ <span class="kw">crate</span>::json::from_str(payload.as_mut_str()) } {
-                <span class="prelude-val">Ok</span>(event) =&gt; <span class="prelude-val">Some</span>(event),
-                <span class="prelude-val">Err</span>(why) =&gt; {
-                    <span class="macro">debug!</span>(
-                        <span class="string">&quot;Could not deserialize websocket event, payload: {}, error: {}&quot;</span>,
-                        payload, why
-                    );
-                    <span class="prelude-val">None
-                </span>},
-            },
+            (<span class="kw">unsafe </span>{ <span class="kw">crate</span>::json::from_str(payload.as_mut_str()) })
+                .map_err(|e| {
+                    <span class="kw">let </span>safe_payload = String::from_utf8_lossy(payload.as_bytes());
+                    <span class="macro">debug!</span>(<span class="string">&quot;Unexpected JSON: {e}. Payload: {safe_payload}&quot;</span>);
+                    e
+                })
+                .ok(),
         <span class="prelude-val">Some</span>(Message::Binary(bytes)) =&gt; {
             <span class="kw">return </span><span class="prelude-val">Err</span>(Error::UnexpectedBinaryMessage(bytes));
         },

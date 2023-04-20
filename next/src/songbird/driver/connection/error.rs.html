@@ -135,10 +135,6 @@
 <a href="#135" id="135">135</a>
 <a href="#136" id="136">136</a>
 <a href="#137" id="137">137</a>
-<a href="#138" id="138">138</a>
-<a href="#139" id="139">139</a>
-<a href="#140" id="140">140</a>
-<a href="#141" id="141">141</a>
 </pre></div><pre class="rust"><code><span class="doccomment">//! Connection errors and convenience types.
 
 </span><span class="kw">use crate</span>::{
@@ -168,8 +164,6 @@
     </span>CryptoModeUnavailable,
     <span class="doccomment">/// An indicator that an endpoint URL was invalid.
     </span>EndpointUrl,
-    <span class="doccomment">/// Discord hello/ready handshake was violated.
-    </span>ExpectedHandshake,
     <span class="doccomment">/// Discord failed to correctly respond to IP discovery.
     </span>IllegalDiscoveryResponse,
     <span class="doccomment">/// Could not parse Discord&#39;s view of our IP.
@@ -244,7 +238,6 @@
             <span class="self">Self</span>::CryptoModeInvalid =&gt; <span class="macro">write!</span>(f, <span class="string">&quot;server changed negotiated encryption mode&quot;</span>),
             <span class="self">Self</span>::CryptoModeUnavailable =&gt; <span class="macro">write!</span>(f, <span class="string">&quot;server did not offer chosen encryption mode&quot;</span>),
             <span class="self">Self</span>::EndpointUrl =&gt; <span class="macro">write!</span>(f, <span class="string">&quot;endpoint URL received from gateway was invalid&quot;</span>),
-            <span class="self">Self</span>::ExpectedHandshake =&gt; <span class="macro">write!</span>(f, <span class="string">&quot;voice initialisation protocol was violated&quot;</span>),
             <span class="self">Self</span>::IllegalDiscoveryResponse =&gt;
                 <span class="macro">write!</span>(f, <span class="string">&quot;IP discovery/NAT punching response was invalid&quot;</span>),
             <span class="self">Self</span>::IllegalIp =&gt; <span class="macro">write!</span>(f, <span class="string">&quot;IP discovery/NAT punching response had bad IP value&quot;</span>),
@@ -265,7 +258,6 @@
             | Error::CryptoModeInvalid
             | Error::CryptoModeUnavailable
             | Error::EndpointUrl
-            | Error::ExpectedHandshake
             | Error::IllegalDiscoveryResponse
             | Error::IllegalIp
             | Error::InterconnectFailure(<span class="kw">_</span>)

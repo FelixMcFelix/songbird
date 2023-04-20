@@ -370,10 +370,6 @@
 <a href="#370" id="370">370</a>
 <a href="#371" id="371">371</a>
 <a href="#372" id="372">372</a>
-<a href="#373" id="373">373</a>
-<a href="#374" id="374">374</a>
-<a href="#375" id="375">375</a>
-<a href="#376" id="376">376</a>
 </pre></div><pre class="rust"><code><span class="kw">pub mod </span>error;
 
 <span class="attr">#[cfg(feature = <span class="string">&quot;receive&quot;</span>)]
@@ -471,8 +467,6 @@
                 },
                 other =&gt; {
                     <span class="macro">debug!</span>(<span class="string">&quot;Expected ready/hello; got: {:?}&quot;</span>, other);
-
-                    <span class="kw">return </span><span class="prelude-val">Err</span>(Error::ExpectedHandshake);
                 },
             }
         }
@@ -680,8 +674,6 @@
                 },
                 other =&gt; {
                     <span class="macro">debug!</span>(<span class="string">&quot;Expected resumed/hello; got: {:?}&quot;</span>, other);
-
-                    <span class="kw">return </span><span class="prelude-val">Err</span>(Error::ExpectedHandshake);
                 },
             }
         }

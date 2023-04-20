@@ -112,7 +112,6 @@
 <a href="#112" id="112">112</a>
 <a href="#113" id="113">113</a>
 <a href="#114" id="114">114</a>
-<a href="#115" id="115">115</a>
 </pre></div><pre class="rust"><code><span class="kw">use crate</span>::{
     error::ConnectionError,
     id::<span class="kw-2">*</span>,
@@ -205,7 +204,6 @@
             | ConnectionError::CryptoModeInvalid
             | ConnectionError::CryptoModeUnavailable
             | ConnectionError::EndpointUrl
-            | ConnectionError::ExpectedHandshake
             | ConnectionError::IllegalDiscoveryResponse
             | ConnectionError::IllegalIp
             | ConnectionError::Json(<span class="kw">_</span>) =&gt; <span class="self">Self</span>::ProtocolViolation,

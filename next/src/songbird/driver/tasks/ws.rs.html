@@ -256,10 +256,6 @@
 <a href="#256" id="256">256</a>
 <a href="#257" id="257">257</a>
 <a href="#258" id="258">258</a>
-<a href="#259" id="259">259</a>
-<a href="#260" id="260">260</a>
-<a href="#261" id="261">261</a>
-<a href="#262" id="262">262</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span><span class="kw">super</span>::message::<span class="kw-2">*</span>;
 <span class="kw">use crate</span>::{
     events::CoreContext,
@@ -357,10 +353,6 @@
                 }
                 ws_msg = <span class="self">self</span>.ws_client.recv_json_no_timeout(), <span class="kw">if </span>!<span class="self">self</span>.dont_send =&gt; {
                     ws_error = <span class="kw">match </span>ws_msg {
-                        <span class="prelude-val">Err</span>(WsError::Json(e)) =&gt; {
-                            <span class="macro">debug!</span>(<span class="string">&quot;Unexpected JSON {:?}.&quot;</span>, e);
-                            <span class="bool-val">false
-                        </span>},
                         <span class="prelude-val">Err</span>(e) =&gt; {
                             should_reconnect = ws_error_is_not_final(<span class="kw-2">&amp;</span>e);
                             ws_reason = <span class="prelude-val">Some</span>((<span class="kw-2">&amp;</span>e).into());
