@@ -819,6 +819,8 @@
 <a href="#819" id="819">819</a>
 <a href="#820" id="820">820</a>
 <a href="#821" id="821">821</a>
+<a href="#822" id="822">822</a>
+<a href="#823" id="823">823</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>std::{
     sync::Arc,
     time::{Duration, Instant},
@@ -1375,6 +1377,7 @@
                 rtp_timestamp: id_0 <span class="kw">as </span>u32,
                 park_time: Instant::now(),
                 last_cost: <span class="prelude-val">None</span>,
+                cull_handle: <span class="prelude-val">None</span>,
             },
             id,
             Instant::now(),
@@ -1438,6 +1441,7 @@
                     rtp_timestamp,
                     park_time,
                     last_cost: <span class="prelude-val">None</span>,
+                    cull_handle: <span class="prelude-val">None</span>,
                 },
             )
         })

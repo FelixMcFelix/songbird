@@ -185,6 +185,23 @@
 <a href="#185" id="185">185</a>
 <a href="#186" id="186">186</a>
 <a href="#187" id="187">187</a>
+<a href="#188" id="188">188</a>
+<a href="#189" id="189">189</a>
+<a href="#190" id="190">190</a>
+<a href="#191" id="191">191</a>
+<a href="#192" id="192">192</a>
+<a href="#193" id="193">193</a>
+<a href="#194" id="194">194</a>
+<a href="#195" id="195">195</a>
+<a href="#196" id="196">196</a>
+<a href="#197" id="197">197</a>
+<a href="#198" id="198">198</a>
+<a href="#199" id="199">199</a>
+<a href="#200" id="200">200</a>
+<a href="#201" id="201">201</a>
+<a href="#202" id="202">202</a>
+<a href="#203" id="203">203</a>
+<a href="#204" id="204">204</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>std::{
     marker::PhantomData,
     time::{Duration, Instant},
@@ -262,6 +279,8 @@
     <span class="doccomment">/// The last known cost of executing this task, if it had to be moved
     /// due to a limit on thread resources.
     </span><span class="kw">pub </span>last_cost: <span class="prelude-ty">Option</span>&lt;Duration&gt;,
+    <span class="doccomment">/// Handle to any forwarder task, used if this mixer is culled while idle.
+    </span><span class="kw">pub </span>cull_handle: <span class="prelude-ty">Option</span>&lt;Sender&lt;()&gt;&gt;,
 }
 
 <span class="attr">#[allow(missing_docs)]
@@ -275,6 +294,7 @@
             rtp_timestamp: random::&lt;u32&gt;(),
             park_time: Instant::now(),
             last_cost: <span class="prelude-val">None</span>,
+            cull_handle: <span class="prelude-val">None</span>,
         }
     }
 
@@ -282,14 +302,28 @@
     ///
     /// Any requests which would cause this mixer to become live will terminate
     /// this task.
-    </span><span class="kw">pub fn </span>spawn_forwarder(<span class="kw-2">&amp;</span><span class="self">self</span>, tx: Sender&lt;SchedulerMessage&gt;, id: TaskId) {
+    </span><span class="kw">pub fn </span>spawn_forwarder(<span class="kw-2">&amp;mut </span><span class="self">self</span>, tx: Sender&lt;SchedulerMessage&gt;, id: TaskId) {
+        <span class="kw">let </span>(kill_tx, kill_rx) = flume::bounded(<span class="number">1</span>);
+        <span class="self">self</span>.cull_handle = <span class="prelude-val">Some</span>(kill_tx);
+
         <span class="kw">let </span>remote_rx = <span class="self">self</span>.mixer.mix_rx.clone();
         tokio::spawn(<span class="kw">async move </span>{
-            <span class="kw">while let </span><span class="prelude-val">Ok</span>(msg) = remote_rx.recv_async().<span class="kw">await </span>{
-                <span class="kw">let </span>exit = msg.is_mixer_now_live();
-                <span class="kw">let </span>dead = tx.send_async(SchedulerMessage::Do(id, msg)).<span class="kw">await</span>.is_err();
-                <span class="kw">if </span>exit || dead {
-                    <span class="kw">break</span>;
+            <span class="kw">loop </span>{
+                <span class="macro">tokio::select! </span>{
+                    biased;
+                    <span class="kw">_ </span>= kill_rx.recv_async() =&gt; <span class="kw">break</span>,
+                    msg = remote_rx.recv_async() =&gt; {
+                        <span class="kw">let </span>exit = <span class="kw">if let </span><span class="prelude-val">Ok</span>(msg) = msg {
+                            <span class="kw">let </span>remove_self = msg.is_mixer_now_live();
+                            tx.send_async(SchedulerMessage::Do(id, msg)).<span class="kw">await</span>.is_err() || remove_self
+                        } <span class="kw">else </span>{
+                            <span class="bool-val">true
+                        </span>};
+
+                        <span class="kw">if </span>exit {
+                            <span class="kw">break</span>;
+                        }
+                    }
                 }
             }
         });

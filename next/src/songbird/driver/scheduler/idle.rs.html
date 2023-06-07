@@ -317,11 +317,18 @@
 <a href="#317" id="317">317</a>
 <a href="#318" id="318">318</a>
 <a href="#319" id="319">319</a>
+<a href="#320" id="320">320</a>
+<a href="#321" id="321">321</a>
+<a href="#322" id="322">322</a>
+<a href="#323" id="323">323</a>
+<a href="#324" id="324">324</a>
+<a href="#325" id="325">325</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>std::{collections::HashMap, sync::Arc, time::Duration};
 
 <span class="kw">use </span>flume::{Receiver, Sender};
 <span class="kw">use </span>nohash_hasher::{BuildNoHashHasher, IntMap};
 <span class="kw">use </span>tokio::time::{Instant <span class="kw">as </span>TokInstant, Interval};
+<span class="kw">use </span>tracing::warn;
 
 <span class="kw">use </span><span class="kw">crate</span>::constants::<span class="kw-2">*</span>;
 
@@ -390,14 +397,14 @@
             biased;
             msg = <span class="self">self</span>.rx.recv_async() =&gt; <span class="kw">match </span>msg {
                 <span class="prelude-val">Ok</span>(SchedulerMessage::NewMixer(rx, ic, cfg)) =&gt; {
-                    <span class="kw">let </span>mixer = ParkedMixer::new(rx, ic, cfg);
+                    <span class="kw">let </span><span class="kw-2">mut </span>mixer = ParkedMixer::new(rx, ic, cfg);
                     <span class="kw">let </span>id = <span class="self">self</span>.next_id.incr();
 
                     mixer.spawn_forwarder(<span class="self">self</span>.tx.clone(), id);
                     <span class="self">self</span>.tasks.insert(id, mixer);
                     <span class="self">self</span>.stats.add_idle_mixer();
                 },
-                <span class="prelude-val">Ok</span>(SchedulerMessage::Demote(id, task)) =&gt; {
+                <span class="prelude-val">Ok</span>(SchedulerMessage::Demote(id, <span class="kw-2">mut </span>task)) =&gt; {
                     task.send_gateway_not_speaking();
 
                     task.spawn_forwarder(<span class="self">self</span>.tx.clone(), id);
@@ -405,15 +412,17 @@
                 },
                 <span class="prelude-val">Ok</span>(SchedulerMessage::Do(id, mix_msg)) =&gt; {
                     <span class="kw">let </span>now_live = mix_msg.is_mixer_now_live();
-                    <span class="kw">let </span>task = <span class="self">self</span>.tasks.get_mut(<span class="kw-2">&amp;</span>id).unwrap();
-
-                    <span class="kw">match </span>task.handle_message(mix_msg) {
-                        <span class="prelude-val">Ok</span>(<span class="bool-val">false</span>) <span class="kw">if </span>now_live =&gt; {
-                            <span class="kw">let </span>task = <span class="self">self</span>.tasks.remove(<span class="kw-2">&amp;</span>id).unwrap();
-                            <span class="self">self</span>.schedule_mixer(task, id, <span class="prelude-val">None</span>);
-                        },
-                        <span class="prelude-val">Ok</span>(<span class="bool-val">false</span>) =&gt; {},
-                        <span class="prelude-val">Ok</span>(<span class="bool-val">true</span>) | <span class="prelude-val">Err</span>(<span class="kw">_</span>) =&gt; <span class="self">self</span>.to_cull.push(id),
+                    <span class="kw">if let </span><span class="prelude-val">Some</span>(task) = <span class="self">self</span>.tasks.get_mut(<span class="kw-2">&amp;</span>id) {
+                        <span class="kw">match </span>task.handle_message(mix_msg) {
+                            <span class="prelude-val">Ok</span>(<span class="bool-val">false</span>) <span class="kw">if </span>now_live =&gt; {
+                                <span class="kw">let </span>task = <span class="self">self</span>.tasks.remove(<span class="kw-2">&amp;</span>id).unwrap();
+                                <span class="self">self</span>.schedule_mixer(task, id, <span class="prelude-val">None</span>);
+                            },
+                            <span class="prelude-val">Ok</span>(<span class="bool-val">false</span>) =&gt; {},
+                            <span class="prelude-val">Ok</span>(<span class="bool-val">true</span>) | <span class="prelude-val">Err</span>(<span class="kw">_</span>) =&gt; <span class="self">self</span>.to_cull.push(id),
+                        }
+                    } <span class="kw">else </span>{
+                        <span class="macro">warn!</span>(<span class="string">&quot;Received post-cull message for {id:?}, discarding.&quot;</span>);
                     }
                 },
                 <span class="prelude-val">Ok</span>(SchedulerMessage::Overspill(worker_id, id, task)) =&gt; {
@@ -455,7 +464,9 @@
         }
 
         <span class="kw">for </span>id <span class="kw">in </span><span class="self">self</span>.to_cull.drain(..) {
-            <span class="self">self</span>.tasks.remove(<span class="kw-2">&amp;</span>id);
+            <span class="kw">if let </span><span class="prelude-val">Some</span>(tx) = <span class="self">self</span>.tasks.remove(<span class="kw-2">&amp;</span>id).and_then(|t| t.cull_handle) {
+                <span class="kw">_ </span>= tx.send_async(()).<span class="kw">await</span>;
+            }
         }
 
         <span class="bool-val">true
@@ -611,6 +622,7 @@
                 rtp_timestamp: i,
                 park_time: TokInstant::now().into(),
                 last_cost: <span class="prelude-val">None</span>,
+                cull_handle: <span class="prelude-val">None</span>,
             };
             core.stats.add_idle_mixer();
             core.stats.move_mixer_to_live();
