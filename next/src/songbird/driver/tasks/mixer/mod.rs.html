@@ -1444,12 +1444,12 @@
             </span><span class="kw">let </span>msg = <span class="kw">match </span>mix_len {
                 MixType::Passthrough(len) <span class="kw">if </span>len == SILENT_FRAME.len() =&gt; OutputMessage::Silent,
                 MixType::Passthrough(len) =&gt; {
-                    <span class="kw">let </span>rtp = RtpPacket::new(<span class="kw-2">&amp;</span>packet).expect(
+                    <span class="kw">let </span>rtp = RtpPacket::new(packet).expect(
                         <span class="string">&quot;FATAL: Too few bytes in self.packet for RTP header.\
                             (Blame: VOICE_PACKET_MAX?)&quot;</span>,
                     );
                     <span class="kw">let </span>payload = rtp.payload();
-                    <span class="kw">let </span>opus_frame = (<span class="kw-2">&amp;</span>payload[TAG_SIZE..][..len]).to_vec();
+                    <span class="kw">let </span>opus_frame = (payload[TAG_SIZE..][..len]).to_vec();
 
                     OutputMessage::Passthrough(opus_frame)
                 },

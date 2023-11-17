@@ -442,6 +442,9 @@
 <a href="#442" id="442">442</a>
 <a href="#443" id="443">443</a>
 <a href="#444" id="444">444</a>
+<a href="#445" id="445">445</a>
+<a href="#446" id="446">446</a>
+<a href="#447" id="447">447</a>
 </pre></div><pre class="rust"><code><span class="attr">#[cfg(feature = <span class="string">&quot;receive&quot;</span>)]
 </span><span class="kw">use </span><span class="kw">crate</span>::driver::DecodeMode;
 <span class="attr">#[cfg(feature = <span class="string">&quot;driver&quot;</span>)]
@@ -849,7 +852,8 @@
         <span class="self">self
     </span>}
 
-    <span class="kw">pub fn </span>test_cfg(raw_output: bool) -&gt; (DriverTestHandle, Config) {
+    <span class="attr">#[must_use]
+    </span><span class="kw">pub fn </span>test_cfg(raw_output: bool) -&gt; (DriverTestHandle, Config) {
         <span class="kw">let </span>(tick_tx, tick_rx) = flume::unbounded();
 
         <span class="kw">let </span>(conn, rx) = <span class="kw">if </span>raw_output {
@@ -862,8 +866,10 @@
             (OutputMode::Rtp(rtp_tx), OutputReceiver::Rtp(rtp_rx))
         };
 
-        <span class="kw">let </span><span class="kw-2">mut </span>sc_config = SchedulerConfig::default();
-        sc_config.strategy = <span class="kw">crate</span>::driver::SchedulerMode::MaxPerThread(<span class="number">1</span>.try_into().unwrap());
+        <span class="kw">let </span>sc_config = SchedulerConfig {
+            strategy: <span class="kw">crate</span>::driver::SchedulerMode::MaxPerThread(<span class="number">1</span>.try_into().unwrap()),
+            move_expensive_tasks: <span class="bool-val">true</span>,
+        };
 
         <span class="kw">let </span>config = Config::default()
             .tick_style(TickStyle::UntimedWithExecLimit(tick_rx))

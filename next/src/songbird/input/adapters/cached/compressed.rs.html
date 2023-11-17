@@ -943,7 +943,7 @@
             // However, we can guarantee that reads will be channel aligned at least!
             </span><span class="kw">for </span>el <span class="kw">in </span>sample_buf[..samples_in_frame].chunks_mut(interleaved_count) {
                 <span class="kw">match </span>src.read_f32_into::&lt;LittleEndian&gt;(el) {
-                    <span class="prelude-val">Ok</span>(<span class="kw">_</span>) =&gt; {
+                    <span class="prelude-val">Ok</span>(()) =&gt; {
                         raw_len += interleaved_count;
                     },
                     <span class="prelude-val">Err</span>(e) <span class="kw">if </span>e.kind() == IoErrorKind::UnexpectedEof =&gt; {

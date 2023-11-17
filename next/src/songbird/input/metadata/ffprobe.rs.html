@@ -171,6 +171,8 @@
 <a href="#171" id="171">171</a>
 <a href="#172" id="172">172</a>
 <a href="#173" id="173">173</a>
+<a href="#174" id="174">174</a>
+<a href="#175" id="175">175</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span><span class="kw">super</span>::AuxMetadata;
 <span class="kw">use </span>serde::{Deserialize, Serialize};
 <span class="kw">use </span>serde_aux::prelude::<span class="kw-2">*</span>;
@@ -275,8 +277,10 @@
     <span class="kw">pub </span>filename: String,
     <span class="kw">pub </span>nb_streams: u64,
     <span class="kw">pub </span>nb_programs: u64,
-    <span class="kw">pub </span>format_name: String,
-    <span class="kw">pub </span>format_long_name: <span class="prelude-ty">Option</span>&lt;String&gt;,
+    <span class="attr">#[serde(rename = <span class="string">&quot;format_name&quot;</span>)]
+    </span><span class="kw">pub </span>name: String,
+    <span class="attr">#[serde(rename = <span class="string">&quot;format_long_name&quot;</span>)]
+    </span><span class="kw">pub </span>long_name: <span class="prelude-ty">Option</span>&lt;String&gt;,
 
     <span class="attr">#[serde(deserialize_with = <span class="string">&quot;deserialize_option_number_from_string&quot;</span>)]
     </span><span class="kw">pub </span>start_time: <span class="prelude-ty">Option</span>&lt;f64&gt;,

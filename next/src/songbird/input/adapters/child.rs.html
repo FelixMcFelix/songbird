@@ -169,7 +169,7 @@
         <span class="kw">return</span>;
     };
 
-    <span class="kw">let </span>attempt = attempt.and_then(|<span class="kw">_</span>| {
+    <span class="kw">let </span>attempt = attempt.and_then(|()| {
         children
             .iter_mut()
             .rev()

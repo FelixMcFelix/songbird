@@ -590,7 +590,7 @@
         <span class="kw">let </span>handle = driver.play(Track::from(file).pause());
 
         <span class="kw">let </span>callback = handle.make_playable();
-        t_handle.spawn_ticker().<span class="kw">await</span>;
+        t_handle.spawn_ticker();
         <span class="macro">assert!</span>(callback.result_async().<span class="kw">await</span>.is_ok());
     }
 
@@ -605,7 +605,7 @@
 
         <span class="kw">let </span>target = Duration::from_millis(<span class="number">500</span>);
         <span class="kw">let </span>callback = handle.seek(target);
-        t_handle.spawn_ticker().<span class="kw">await</span>;
+        t_handle.spawn_ticker();
 
         <span class="kw">let </span>answer = callback.result_async().<span class="kw">await</span>;
         <span class="macro">assert!</span>(answer.is_ok());

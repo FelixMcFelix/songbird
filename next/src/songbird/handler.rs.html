@@ -731,7 +731,7 @@
 
             <span class="self">self</span>.update()
                 .<span class="kw">await
-                </span>.map(|<span class="kw">_</span>| Join::new(rx.into_recv_async(), gw_rx.into_recv_async(), timeout))
+                </span>.map(|()| Join::new(rx.into_recv_async(), gw_rx.into_recv_async(), timeout))
         } <span class="kw">else </span>{
             <span class="comment">// Skipping the gateway connection implies that the current connection is complete
             // AND the channel is a match.
@@ -794,7 +794,7 @@
 
             <span class="self">self</span>.update()
                 .<span class="kw">await
-                </span>.map(|<span class="kw">_</span>| JoinGateway::new(rx.into_recv_async(), timeout))
+                </span>.map(|()| JoinGateway::new(rx.into_recv_async(), timeout))
         } <span class="kw">else </span>{
             <span class="prelude-val">Ok</span>(JoinGateway::new(rx.into_recv_async(), <span class="prelude-val">None</span>))
         }

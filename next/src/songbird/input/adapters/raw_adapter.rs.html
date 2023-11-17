@@ -188,7 +188,7 @@
             };
 
             <span class="kw">let </span>out = <span class="kw">if </span>target_pos <span class="kw">as </span>usize &lt;= <span class="self">self</span>.prepend.len() {
-                <span class="self">self</span>.inner.rewind().map(|<span class="kw">_</span>| <span class="number">0</span>)
+                <span class="self">self</span>.inner.rewind().map(|()| <span class="number">0</span>)
             } <span class="kw">else </span>{
                 <span class="self">self</span>.inner.seek(SeekFrom::Start(target_pos))
             };

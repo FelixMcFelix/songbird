@@ -340,7 +340,7 @@
             <span class="kw">let </span>hb = sleep_until(next_heartbeat);
 
             <span class="macro">select! </span>{
-                <span class="kw">_ </span>= hb =&gt; {
+                () = hb =&gt; {
                     ws_error = <span class="kw">match </span><span class="self">self</span>.send_heartbeat().<span class="kw">await </span>{
                         <span class="prelude-val">Err</span>(e) =&gt; {
                             should_reconnect = ws_error_is_not_final(<span class="kw-2">&amp;</span>e);

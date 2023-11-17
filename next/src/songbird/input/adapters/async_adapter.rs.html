@@ -460,7 +460,7 @@
             <span class="kw">let </span>msg = <span class="kw">if </span>blocked || hit_end {
                 <span class="kw">let </span><span class="kw-2">mut </span>fs = FuturesUnordered::new();
                 fs.push(Either::Left(<span class="self">self</span>.req_rx.recv_async()));
-                fs.push(Either::Right(<span class="self">self</span>.notify_rx.notified().map(|<span class="kw">_</span>| {
+                fs.push(Either::Right(<span class="self">self</span>.notify_rx.notified().map(|()| {
                     <span class="kw">let </span>o: <span class="prelude-ty">Result</span>&lt;AdapterRequest, RecvError&gt; = <span class="prelude-val">Ok</span>(AdapterRequest::Wake);
                     o
                 })));
@@ -651,7 +651,7 @@
         </span><span class="self">self</span>.finalised.store(<span class="bool-val">false</span>, Ordering::Relaxed);
         <span class="kw">match </span><span class="self">self</span>.handle_messages(Operation::Seek) {
             <span class="prelude-val">Some</span>(AdapterResponse::SeekClear) =&gt; {},
-            <span class="prelude-val">None </span>=&gt; <span class="self">self</span>.check_dropped().map(|<span class="kw">_</span>| <span class="macro">unreachable!</span>())<span class="question-mark">?</span>,
+            <span class="prelude-val">None </span>=&gt; <span class="self">self</span>.check_dropped().map(|()| <span class="macro">unreachable!</span>())<span class="question-mark">?</span>,
             <span class="kw">_ </span>=&gt; <span class="macro">unreachable!</span>(),
         }
 
@@ -661,7 +661,7 @@
 
         <span class="kw">match </span><span class="self">self</span>.handle_messages(Operation::Seek) {
             <span class="prelude-val">Some</span>(AdapterResponse::SeekResult(a)) =&gt; a,
-            <span class="prelude-val">None </span>=&gt; <span class="self">self</span>.check_dropped().map(|<span class="kw">_</span>| <span class="macro">unreachable!</span>()),
+            <span class="prelude-val">None </span>=&gt; <span class="self">self</span>.check_dropped().map(|()| <span class="macro">unreachable!</span>()),
             <span class="kw">_ </span>=&gt; <span class="macro">unreachable!</span>(),
         }
     }
@@ -679,7 +679,7 @@
 
         <span class="kw">match </span><span class="self">self</span>.handle_messages(Operation::Len) {
             <span class="prelude-val">Some</span>(AdapterResponse::ByteLen(a)) =&gt; a,
-            <span class="prelude-val">None </span>=&gt; <span class="self">self</span>.check_dropped().ok().map(|<span class="kw">_</span>| <span class="macro">unreachable!</span>()),
+            <span class="prelude-val">None </span>=&gt; <span class="self">self</span>.check_dropped().ok().map(|()| <span class="macro">unreachable!</span>()),
             <span class="kw">_ </span>=&gt; <span class="macro">unreachable!</span>(),
         }
     }

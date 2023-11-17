@@ -1096,7 +1096,7 @@
         <span class="kw">for </span>(i, mixer) <span class="kw">in </span><span class="self">self</span>.tasks.iter_mut().enumerate() {
             <span class="kw">let </span>res = mixer
                 .audio_commands_events()
-                .and_then(|<span class="kw">_</span>| mixer.check_and_send_keepalive(<span class="self">self</span>.start_of_work));
+                .and_then(|()| mixer.check_and_send_keepalive(<span class="self">self</span>.start_of_work));
             rebuild_if_err(mixer, res, <span class="kw-2">&amp;mut </span><span class="self">self</span>.to_cull, i);
         }
 

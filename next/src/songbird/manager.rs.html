@@ -495,6 +495,8 @@
 <a href="#495" id="495">495</a>
 <a href="#496" id="496">496</a>
 <a href="#497" id="497">497</a>
+<a href="#498" id="498">498</a>
+<a href="#499" id="499">499</a>
 </pre></div><pre class="rust"><code><span class="attr">#[cfg(feature = <span class="string">&quot;serenity&quot;</span>)]
 </span><span class="kw">use </span><span class="kw">crate</span>::shards::SerenitySharder;
 <span class="kw">use crate</span>::{
@@ -685,6 +687,8 @@
     }
 
     <span class="doccomment">/// Creates an iterator for all [`Call`]s currently managed.
+    </span><span class="comment">// TODO: Implement IntoIterator
+    </span><span class="attr">#[allow(clippy::iter_without_into_iter)]
     </span><span class="kw">pub fn </span>iter(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; Iter&lt;<span class="lifetime">&#39;_</span>&gt; {
         Iter {
             inner: <span class="self">self</span>.calls.iter().map(|x| (<span class="kw-2">*</span>x.key(), Arc::clone(x.value()))),
@@ -750,7 +754,7 @@
         </span>};
 
         <span class="kw">match </span>stage_1 {
-            <span class="prelude-val">Ok</span>(chan) =&gt; chan.<span class="kw">await</span>.map(|<span class="kw">_</span>| call),
+            <span class="prelude-val">Ok</span>(chan) =&gt; chan.<span class="kw">await</span>.map(|()| call),
             <span class="prelude-val">Err</span>(e) =&gt; <span class="prelude-val">Err</span>(e),
         }
     }
@@ -941,7 +945,7 @@
 
     <span class="kw">async fn </span>state_update(<span class="kw-2">&amp;</span><span class="self">self</span>, guild_id: SerenityGuild, voice_state: <span class="kw-2">&amp;</span>VoiceState) {
         <span class="kw">if </span><span class="self">self</span>.client_data.get().map_or(<span class="bool-val">true</span>, |data| {
-            UserId::from(voice_state.user_id) != data.user_id
+            voice_state.user_id.get() != data.user_id.<span class="number">0</span>.get()
         }) {
             <span class="kw">return</span>;
         }

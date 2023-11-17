@@ -128,6 +128,7 @@
 <a href="#128" id="128">128</a>
 <a href="#129" id="129">129</a>
 <a href="#130" id="130">130</a>
+<a href="#131" id="131">131</a>
 </pre></div><pre class="rust"><code><span class="doccomment">//! Constants affecting driver function and API handling.
 
 </span><span class="attr">#[cfg(feature = <span class="string">&quot;driver&quot;</span>)]
@@ -211,6 +212,7 @@
 </span><span class="kw">pub const </span>RTP_PROFILE_TYPE: RtpType = RtpType::Dynamic(<span class="number">120</span>);
 
 <span class="attr">#[cfg(test)]
+#[allow(clippy::doc_markdown)]
 </span><span class="kw">pub mod </span>test_data {
     <span class="doccomment">/// URL for a source which YTDL must extract.
     ///
