@@ -590,6 +590,11 @@
         <span class="kw">let </span>source_packet = source_packet.unwrap();
 
         <span class="kw">let </span>in_rate = source_packet.spec().rate;
+        <span class="kw">let </span>pkt_frames = source_packet.frames();
+
+        <span class="kw">if </span>pkt_frames == <span class="number">0 </span>{
+            <span class="kw">continue</span>;
+        }
 
         <span class="kw">if </span>in_rate == SAMPLE_RATE_RAW <span class="kw">as </span>u32 {
             <span class="comment">// No need to resample: mix as standard.
@@ -604,7 +609,7 @@
             samples_written += samples_marched;
 
             local_state.inner_pos += samples_marched;
-            local_state.inner_pos %= source_packet.frames();
+            local_state.inner_pos %= pkt_frames;
         } <span class="kw">else </span>{
             <span class="comment">// NOTE: this should NEVER change in one stream.
             </span><span class="kw">let </span>chan_c = source_packet.spec().channels.count();
@@ -624,11 +629,6 @@
             });
 
             <span class="kw">let </span>inner_pos = local_state.inner_pos;
-            <span class="kw">let </span>pkt_frames = source_packet.frames();
-
-            <span class="kw">if </span>pkt_frames == <span class="number">0 </span>{
-                <span class="kw">continue</span>;
-            }
 
             <span class="kw">let </span>needed_in_frames = resampler.input_frames_next();
             <span class="kw">let </span>available_frames = pkt_frames - inner_pos;
