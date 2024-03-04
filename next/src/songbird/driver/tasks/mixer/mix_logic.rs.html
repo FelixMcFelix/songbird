@@ -523,7 +523,7 @@
                     // seen. The main one is that most Opus tracks end on a sub-20ms
                     // frame, particularly on Youtube.
                     // However, a frame that's bigger than the target buffer is an instant block.
-                    </span><span class="kw">let </span>buf_size_fatal = buf.len() &lt;= slot.len();
+                    </span><span class="kw">let </span>buf_size_fatal = buf.len() &gt;= slot.len();
 
                     <span class="kw">if match </span>sample_ct {
                         <span class="prelude-val">Ok</span>(MONO_FRAME_SIZE) =&gt; <span class="bool-val">true</span>,
