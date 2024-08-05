@@ -256,6 +256,10 @@
 <a href="#256" id="256">256</a>
 <a href="#257" id="257">257</a>
 <a href="#258" id="258">258</a>
+<a href="#259" id="259">259</a>
+<a href="#260" id="260">260</a>
+<a href="#261" id="261">261</a>
+<a href="#262" id="262">262</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span><span class="kw">super</span>::message::<span class="kw-2">*</span>;
 <span class="kw">use crate</span>::{
     events::CoreContext,
@@ -270,7 +274,7 @@
     ConnectionInfo,
 };
 <span class="kw">use </span>flume::Receiver;
-<span class="kw">use </span>rand::random;
+<span class="kw">use </span>rand::{distributions::Uniform, Rng};
 <span class="attr">#[cfg(feature = <span class="string">"receive"</span>)]
 </span><span class="kw">use </span>std::sync::Arc;
 <span class="kw">use </span>std::time::Duration;
@@ -432,7 +436,11 @@
     }
 
     <span class="kw">async fn </span>send_heartbeat(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;(), WsError&gt; {
-        <span class="kw">let </span>nonce = random::&lt;u64&gt;();
+        <span class="comment">// Discord have suddenly, mysteriously, started rejecting
+        // ints-as-strings. Keep JS happy here, I suppose...
+        </span><span class="kw">const </span>JS_MAX_INT: u64 = (<span class="number">1u64 </span>&lt;&lt; <span class="number">53</span>) - <span class="number">1</span>;
+        <span class="kw">let </span>nonce_range = Uniform::from(<span class="number">0</span>..JS_MAX_INT);
+        <span class="kw">let </span>nonce = rand::thread_rng().sample(nonce_range);
         <span class="self">self</span>.last_heartbeat_nonce = <span class="prelude-val">Some</span>(nonce);
 
         <span class="macro">trace!</span>(<span class="string">"Sent heartbeat {:?}"</span>, <span class="self">self</span>.speaking);
