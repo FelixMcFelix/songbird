@@ -10,27 +10,64 @@ use crypto_secretbox::{
 };
 use discortp::{rtp::RtpPacket, MutablePacket};
 use rand::Rng;
-use std::num::Wrapping;
+use std::{num::Wrapping, str::FromStr};
+use crate::error::ConnectionError;
 
 #[cfg(test)]
 pub const KEY_SIZE: usize = SecretBox::<()>::KEY_SIZE;
 pub const NONCE_SIZE: usize = SecretBox::<()>::NONCE_SIZE;
 pub const TAG_SIZE: usize = SecretBox::<()>::TAG_SIZE;
 
-/// Variants of the `XSalsa20Poly1305` encryption scheme.
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+/// Encryption schemes used for voice packets.
+#[derive(Clone, Copy, Debug, Eq, PartialEq, Default, Hash)]
 #[non_exhaustive]
 pub enum CryptoMode {
+    #[default]
+    /// Discord's currently preferred non-E2EE encryption scheme.
+    ///
+    /// Packets are encrypted and decrypted using the `AES256GCM` encryption scheme.
+    /// An additional random 4B suffix is used as the source of nonce bytes for the packet.
+    /// This nonce value increments by `1` with each packet.
+    ///
+    /// Encrypted content begins *after* the RTP header, following the SRTP specification.
+    ///
+    /// Nonce width of 4B (32b), at an extra 4B per packet (~0.2 kB/s).
+    Aes256Gcm,
+    /// A fallback non-E2EE encryption scheme.
+    ///
+    /// Packets are encrypted and decrypted using the `XChaCha20Poly1305` encryption scheme.
+    /// An additional random 4B suffix is used as the source of nonce bytes for the packet.
+    /// This nonce value increments by `1` with each packet.
+    ///
+    /// Encrypted content begins *after* the RTP header, following the SRTP specification.
+    ///
+    /// Nonce width of 4B (32b), at an extra 4B per packet (~0.2 kB/s).
+    XChaCha20Poly1305,
+    #[deprecated(
+        since = "0.4.4",
+        note = "This voice encryption mode will no longer be accepted by Discord\
+                as of 2024-11-18. This variant will be removed in `v0.5`.",
+    )]
     /// The RTP header is used as the source of nonce bytes for the packet.
     ///
     /// Equivalent to a nonce of at most 48b (6B) at no extra packet overhead:
     /// the RTP sequence number and timestamp are the varying quantities.
     Normal,
+    #[deprecated(
+        since = "0.4.4",
+        note = "This voice encryption mode will no longer be accepted by Discord\
+                as of 2024-11-18. This variant will be removed in `v0.5`.",
+    )]
     /// An additional random 24B suffix is used as the source of nonce bytes for the packet.
     /// This is regenerated randomly for each packet.
     ///
     /// Full nonce width of 24B (192b), at an extra 24B per packet (~1.2 kB/s).
     Suffix,
+    #[deprecated(
+        since = "0.4.4",
+        note = "This voice encryption mode will no longer be accepted by Discord\
+                as of 2024-11-18. This variant will be removed in `v0.5`.",
+    )]
     /// An additional random 4B suffix is used as the source of nonce bytes for the packet.
     /// This nonce value increments by `1` with each packet.
     ///
@@ -39,8 +76,11 @@ pub enum CryptoMode {
 }
 
 impl From<CryptoState> for CryptoMode {
+    #[allow(deprecated)]
     fn from(val: CryptoState) -> Self {
         match val {
+            CryptoState::Aes256Gcm(_) => Self::Aes256Gcm,
+            CryptoState::XChaCha20Poly1305(_) => Self::XChaCha20Poly1305,
             CryptoState::Normal => Self::Normal,
             CryptoState::Suffix => Self::Suffix,
             CryptoState::Lite(_) => Self::Lite,
@@ -48,11 +88,103 @@ impl From<CryptoState> for CryptoMode {
     }
 }
 
+#[derive(Clone, Copy, Debug, Eq, PartialEq, Hash)]
+enum EncryptionAlgorithm {
+    Aes256,
+    XChaCha20Poly1305,
+    XSalsa20Poly1305,
+}
+
+/// The input string could not be parsed as an encryption scheme supported by songbird.
+#[derive(Clone, Copy, Debug, Eq, PartialEq, Hash)]
+pub struct UnrecognisedCryptoMode;
+
+impl FromStr for CryptoMode {
+    type Err = UnrecognisedCryptoMode;
+
+    #[allow(deprecated)]
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "aead_aes256_gcm_rtpsize" => Ok(Self::Aes256Gcm),
+            "aead_xchacha20_poly1305_rtpsize" => Ok(Self::XChaCha20Poly1305),
+            "xsalsa20_poly1305" => Ok(Self::Normal),
+            "xsalsa20_poly1305_suffix" => Ok(Self::Suffix),
+            "xsalsa20_poly1305_lite" => Ok(Self::Lite),
+            _ => Err(UnrecognisedCryptoMode)
+        }
+    }
+}
+
+#[allow(deprecated)]
 impl CryptoMode {
+    /// Returns the underlying crypto algorithm used by a given [`CryptoMode`].
+    #[must_use]
+    pub(crate) fn algorithm(&self) -> EncryptionAlgorithm {
+        match self {
+            CryptoMode::Aes256Gcm => EncryptionAlgorithm::Aes256,
+            CryptoMode::XChaCha20Poly1305 => EncryptionAlgorithm::XChaCha20Poly1305,
+            CryptoMode::Normal | CryptoMode::Suffix | CryptoMode::Lite
+                => EncryptionAlgorithm::XSalsa20Poly1305,
+        }
+    }
+
+    /// Returns a local priority score for a given [`CryptoMode`].
+    ///
+    /// Higher values are preferred.
+    #[must_use]
+    pub(crate) fn priority(&self) -> u64 {
+        match self {
+            CryptoMode::Aes256Gcm => 4,
+            CryptoMode::XChaCha20Poly1305 => 3,
+            CryptoMode::Normal => 2,
+            CryptoMode::Suffix => 1,
+            CryptoMode::Lite => 0,
+        }
+    }
+
+    /// Returns the best available crypto mode, given the `modes` offered by the Discord voice server.
+    ///
+    /// If `preferred` is set and the mode exists in the server's supported algorithms, then that
+    /// mode will be chosen. Otherwise we select the highest-scoring option which is mutually understood.
+    #[must_use]
+    pub(crate) fn negotiate<It, T>(modes: It, preferred: Option<Self>) -> Result<Self, ConnectionError>
+        where
+            T: for<'a> AsRef<&'a str>,
+            It: IntoIterator<Item = T>,
+    {
+        let mut best = None;
+        for el in modes {
+            let Ok(el) = CryptoMode::from_str(el.as_ref()) else {
+                // Unsupported mode. Ignore.
+                continue;
+            };
+
+            let Some((curr_best, curr_score)) = best else {
+                best = Some((el, el.priority()));
+                continue;
+            };
+
+            let el_priority = el.priority();
+
+            // Not quite right. Think on it.
+            if let Some(preferred) = preferred {
+                if el == preferred {
+                    best = Some((el, el_priority));
+                }
+            } else if el.{
+
+            }
+        }
+
+        best.map(|(v, score)| v).ok_or(ConnectionError::CryptoModeUnavailable)
+    }
+
     /// Returns the name of a mode as it will appear during negotiation.
     #[must_use]
     pub fn to_request_str(self) -> &'static str {
         match self {
+            Self::Aes256Gcm => "aead_aes256_gcm_rtpsize",
+            Self::XChaCha20Poly1305 => "aead_xchacha20_poly1305_rtpsize",
             Self::Normal => "xsalsa20_poly1305",
             Self::Suffix => "xsalsa20_poly1305_suffix",
             Self::Lite => "xsalsa20_poly1305_lite",
@@ -64,9 +196,9 @@ impl CryptoMode {
     #[must_use]
     pub fn nonce_size(self) -> usize {
         match self {
+            Self::Aes256Gcm | Self::XChaCha20Poly1305 | Self::Lite => 4,
             Self::Normal => RtpPacket::minimum_packet_size(),
             Self::Suffix => NONCE_SIZE,
-            Self::Lite => 4,
         }
     }
 
@@ -74,6 +206,7 @@ impl CryptoMode {
     /// which fall before the payload.
     #[must_use]
     pub fn payload_prefix_len() -> usize {
+        // TODO: this may be totally wrong.
         TAG_SIZE
     }
 
@@ -191,9 +324,19 @@ impl CryptoMode {
 
 /// State used in nonce generation for the `XSalsa20Poly1305` encryption variants
 /// in [`CryptoMode`].
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+#[derive(Clone, Copy, Debug, Eq, PartialEq, Hash)]
 #[non_exhaustive]
 pub enum CryptoState {
+    /// An additional random 4B suffix is used as the source of nonce bytes for the packet.
+    /// This nonce value increments by `1` with each packet.
+    ///
+    /// The last used nonce is stored.
+    Aes256Gcm(Wrapping<u32>),
+    /// An additional random 4B suffix is used as the source of nonce bytes for the packet.
+    /// This nonce value increments by `1` with each packet.
+    ///
+    /// The last used nonce is stored.
+    XChaCha20Poly1305(Wrapping<u32>),
     /// The RTP header is used as the source of nonce bytes for the packet.
     ///
     /// No state is required.
@@ -213,6 +356,8 @@ pub enum CryptoState {
 impl From<CryptoMode> for CryptoState {
     fn from(val: CryptoMode) -> Self {
         match val {
+            CryptoMode::Aes256Gcm => CryptoState::Lite(Wrapping(rand::random::<u32>()))
+            CryptoMode::XChaCha20Poly1305 => CryptoState::Lite(Wrapping(rand::random::<u32>()))
             CryptoMode::Normal => CryptoState::Normal,
             CryptoMode::Suffix => CryptoState::Suffix,
             CryptoMode::Lite => CryptoState::Lite(Wrapping(rand::random::<u32>())),
