@@ -1,22 +1,133 @@
 //! Encryption schemes supported by Discord's secure RTP negotiation.
+use crate::error::ConnectionError;
+use aes_gcm::{Aes256Gcm, KeyInit, Nonce as AesNonce};
 use byteorder::{NetworkEndian, WriteBytesExt};
+use chacha20poly1305::{XChaCha20Poly1305, XNonce};
 #[cfg(any(feature = "receive", test))]
 use crypto_secretbox::Tag;
 use crypto_secretbox::{
     aead::{AeadInPlace, Error as CryptoError},
-    Nonce,
+    cipher::InvalidLength,
+    Nonce as SbNonce,
     SecretBox,
     XSalsa20Poly1305 as Cipher,
 };
 use discortp::{rtp::RtpPacket, MutablePacket};
 use rand::Rng;
 use std::{num::Wrapping, str::FromStr};
-use crate::error::ConnectionError;
 
 #[cfg(test)]
 pub const KEY_SIZE: usize = SecretBox::<()>::KEY_SIZE;
 pub const NONCE_SIZE: usize = SecretBox::<()>::NONCE_SIZE;
 pub const TAG_SIZE: usize = SecretBox::<()>::TAG_SIZE;
+
+#[derive(Clone)]
+pub(crate) enum NuCipher {
+    XSalsa20Poly1305(Cipher),
+    Aes256Gcm(Aes256Gcm),
+    XChaCha20Poly1305(XChaCha20Poly1305),
+}
+
+impl From<Cipher> for NuCipher {
+    fn from(value: Cipher) -> Self {
+        Self::XSalsa20Poly1305(value)
+    }
+}
+
+impl From<Aes256Gcm> for NuCipher {
+    fn from(value: Aes256Gcm) -> Self {
+        Self::Aes256Gcm(value)
+    }
+}
+
+impl From<XChaCha20Poly1305> for NuCipher {
+    fn from(value: XChaCha20Poly1305) -> Self {
+        Self::XChaCha20Poly1305(value)
+    }
+}
+
+// TODO: test whether setting nonce size to 4B in these types works identically
+// to discord's 'left pad with zeroes up to algo-default amount'.
+
+impl NuCipher {
+    /// Encrypts a Discord RT(C)P packet using the given key.
+    ///
+    /// Use of this requires that the input packet has had a nonce generated in the correct location,
+    /// and `payload_len` specifies the number of bytes after the header including this nonce.
+    #[inline]
+    pub fn encrypt_pkt_in_place(
+        &self,
+        mode: CryptoMode,
+        packet: &mut impl MutablePacket,
+        payload_len: usize,
+    ) -> Result<(), CryptoError> {
+        let header_len = packet.packet().len() - packet.payload().len();
+
+        println!(
+            "Think I have payl_len {payload_len}, pkt {} non-hdr {} (hdr {header_len}). splits pre {} post {}",
+            packet.packet().len(),
+            packet.payload().len(),
+            mode.payload_prefix_len2(),
+            mode.payload_suffix_len(),
+        );
+
+        let (header, body) = packet.packet_mut().split_at_mut(header_len);
+        let (slice_to_use, body_remaining) = mode.nonce_slice(header, &mut body[..payload_len])?;
+
+        println!(
+            "Question time. nonce_slice {:0x?} (l{}) body {:0x?} (l{})",
+            slice_to_use,
+            slice_to_use.len(),
+            body_remaining,
+            body_remaining.len(),
+        );
+
+        println!(
+            "think I'm reading nonce from {:?} (sz4)",
+            slice_to_use.as_ptr()
+        );
+
+        // body_remaining is now correctly truncated to exclude the nonce by this point.
+        // the true_payload to encrypt is within the buf[prefix:-suffix].
+        let (pre_payload, body_remaining) = body_remaining.split_at_mut(mode.payload_prefix_len2());
+        let (body, post_payload) =
+            body_remaining.split_at_mut(body_remaining.len() - mode.tag_suffix_len());
+
+        // All these Nonce types are distinct at the type level
+        // (96b for AES, 192b for XSalsa/XChaCha).
+        // TODO: E2EE apparently wants the least significant bytes used.
+        //       This scheme uses most significant bytes.
+        match self {
+            NuCipher::XSalsa20Poly1305(secret_box) => {
+                let mut nonce = SbNonce::default();
+                nonce[..mode.nonce_size()].copy_from_slice(slice_to_use);
+
+                let tag = secret_box.encrypt_in_place_detached(&nonce, b"", body)?;
+                pre_payload[..TAG_SIZE].copy_from_slice(&tag[..]);
+            },
+            NuCipher::Aes256Gcm(aes_gcm) => {
+                let mut nonce = AesNonce::default();
+                nonce[..mode.nonce_size()].copy_from_slice(slice_to_use);
+                // let l = nonce.len();
+                // nonce[l-mode.nonce_size()..].copy_from_slice(slice_to_use);
+
+                // let tag = aes_gcm.encrypt_in_place_detached(&nonce, b"", body)?;
+                let tag = aes_gcm.encrypt_in_place_detached(&nonce, header, body)?;
+                post_payload[..TAG_SIZE].copy_from_slice(&tag[..]);
+            },
+            NuCipher::XChaCha20Poly1305(cha_cha_poly1305) => {
+                let mut nonce = XNonce::default();
+                nonce[..mode.nonce_size()].copy_from_slice(slice_to_use);
+
+                // let tag = cha_cha_poly1305.encrypt_in_place_detached(&nonce, b"", body)?;
+                let tag = cha_cha_poly1305.encrypt_in_place_detached(&nonce, header, body)?;
+                post_payload[..TAG_SIZE].copy_from_slice(&tag[..]);
+            },
+        }
+
+        Ok(())
+    }
+}
 
 /// Encryption schemes used for voice packets.
 #[derive(Clone, Copy, Debug, Eq, PartialEq, Default, Hash)]
@@ -46,7 +157,7 @@ pub enum CryptoMode {
     #[deprecated(
         since = "0.4.4",
         note = "This voice encryption mode will no longer be accepted by Discord\
-                as of 2024-11-18. This variant will be removed in `v0.5`.",
+                as of 2024-11-18. This variant will be removed in `v0.5`."
     )]
     /// The RTP header is used as the source of nonce bytes for the packet.
     ///
@@ -56,7 +167,7 @@ pub enum CryptoMode {
     #[deprecated(
         since = "0.4.4",
         note = "This voice encryption mode will no longer be accepted by Discord\
-                as of 2024-11-18. This variant will be removed in `v0.5`.",
+                as of 2024-11-18. This variant will be removed in `v0.5`."
     )]
     /// An additional random 24B suffix is used as the source of nonce bytes for the packet.
     /// This is regenerated randomly for each packet.
@@ -66,7 +177,7 @@ pub enum CryptoMode {
     #[deprecated(
         since = "0.4.4",
         note = "This voice encryption mode will no longer be accepted by Discord\
-                as of 2024-11-18. This variant will be removed in `v0.5`.",
+                as of 2024-11-18. This variant will be removed in `v0.5`."
     )]
     /// An additional random 4B suffix is used as the source of nonce bytes for the packet.
     /// This nonce value increments by `1` with each packet.
@@ -90,9 +201,32 @@ impl From<CryptoState> for CryptoMode {
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq, Hash)]
 enum EncryptionAlgorithm {
-    Aes256,
+    Aes256Gcm,
     XChaCha20Poly1305,
     XSalsa20Poly1305,
+}
+
+impl EncryptionAlgorithm {
+    /// Returns an encryption cipher based on the supplied key.
+    ///
+    /// Creation fails if the key is the incorrect length for the target cipher.
+    pub(crate) fn cipher_from_key(&self, key: &[u8]) -> Result<NuCipher, InvalidLength> {
+        match self {
+            EncryptionAlgorithm::Aes256Gcm => Aes256Gcm::new_from_slice(key).map(Into::into),
+            EncryptionAlgorithm::XChaCha20Poly1305 =>
+                XChaCha20Poly1305::new_from_slice(key).map(Into::into),
+            EncryptionAlgorithm::XSalsa20Poly1305 => Cipher::new_from_slice(key).map(Into::into),
+        }
+    }
+
+    #[must_use]
+    pub(crate) fn encryption_tag_len(self) -> usize {
+        match self {
+            EncryptionAlgorithm::Aes256Gcm => 16,
+            EncryptionAlgorithm::XChaCha20Poly1305 => 16,
+            EncryptionAlgorithm::XSalsa20Poly1305 => TAG_SIZE,
+        }
+    }
 }
 
 /// The input string could not be parsed as an encryption scheme supported by songbird.
@@ -110,7 +244,7 @@ impl FromStr for CryptoMode {
             "xsalsa20_poly1305" => Ok(Self::Normal),
             "xsalsa20_poly1305_suffix" => Ok(Self::Suffix),
             "xsalsa20_poly1305_lite" => Ok(Self::Lite),
-            _ => Err(UnrecognisedCryptoMode)
+            _ => Err(UnrecognisedCryptoMode),
         }
     }
 }
@@ -121,11 +255,18 @@ impl CryptoMode {
     #[must_use]
     pub(crate) fn algorithm(&self) -> EncryptionAlgorithm {
         match self {
-            CryptoMode::Aes256Gcm => EncryptionAlgorithm::Aes256,
+            CryptoMode::Aes256Gcm => EncryptionAlgorithm::Aes256Gcm,
             CryptoMode::XChaCha20Poly1305 => EncryptionAlgorithm::XChaCha20Poly1305,
-            CryptoMode::Normal | CryptoMode::Suffix | CryptoMode::Lite
-                => EncryptionAlgorithm::XSalsa20Poly1305,
+            CryptoMode::Normal | CryptoMode::Suffix | CryptoMode::Lite =>
+                EncryptionAlgorithm::XSalsa20Poly1305,
         }
+    }
+
+    /// Returns an encryption cipher based on the supplied key.
+    ///
+    /// Creation fails if the key is the incorrect length for the target cipher.
+    pub fn cipher_from_key(&self, key: &[u8]) -> Result<NuCipher, InvalidLength> {
+        self.algorithm().cipher_from_key(key)
     }
 
     /// Returns a local priority score for a given [`CryptoMode`].
@@ -147,10 +288,13 @@ impl CryptoMode {
     /// If `preferred` is set and the mode exists in the server's supported algorithms, then that
     /// mode will be chosen. Otherwise we select the highest-scoring option which is mutually understood.
     #[must_use]
-    pub(crate) fn negotiate<It, T>(modes: It, preferred: Option<Self>) -> Result<Self, ConnectionError>
-        where
-            T: for<'a> AsRef<&'a str>,
-            It: IntoIterator<Item = T>,
+    pub(crate) fn negotiate<It, T>(
+        modes: It,
+        preferred: Option<Self>,
+    ) -> Result<Self, ConnectionError>
+    where
+        T: AsRef<str>,
+        It: IntoIterator<Item = T>,
     {
         let mut best = None;
         for el in modes {
@@ -159,24 +303,26 @@ impl CryptoMode {
                 continue;
             };
 
-            let Some((curr_best, curr_score)) = best else {
-                best = Some((el, el.priority()));
-                continue;
-            };
-
-            let el_priority = el.priority();
-
-            // Not quite right. Think on it.
+            let mut el_priority = el.priority();
             if let Some(preferred) = preferred {
                 if el == preferred {
-                    best = Some((el, el_priority));
+                    el_priority = u64::MAX;
                 }
-            } else if el.{
+            }
 
+            let accept = match best {
+                None => true,
+                Some((_, score)) if el_priority > score => true,
+                _ => false,
+            };
+
+            if accept {
+                best = Some((el, el_priority));
             }
         }
 
-        best.map(|(v, score)| v).ok_or(ConnectionError::CryptoModeUnavailable)
+        best.map(|(v, _)| v)
+            .ok_or(ConnectionError::CryptoModeUnavailable)
     }
 
     /// Returns the name of a mode as it will appear during negotiation.
@@ -202,12 +348,21 @@ impl CryptoMode {
         }
     }
 
+    /// Returns the number of bytes occupied by the XSalsa20Poly1305
+    /// encryption schemes which fall before the payload.
+    #[must_use]
+    pub fn payload_prefix_len() -> usize {
+        TAG_SIZE
+    }
+
     /// Returns the number of bytes occupied by the encryption scheme
     /// which fall before the payload.
     #[must_use]
-    pub fn payload_prefix_len() -> usize {
-        // TODO: this may be totally wrong.
-        TAG_SIZE
+    pub const fn payload_prefix_len2(self) -> usize {
+        match self {
+            CryptoMode::Aes256Gcm | CryptoMode::XChaCha20Poly1305 => 0,
+            CryptoMode::Normal | CryptoMode::Suffix | CryptoMode::Lite => TAG_SIZE,
+        }
     }
 
     /// Returns the number of bytes occupied by the encryption scheme
@@ -217,14 +372,32 @@ impl CryptoMode {
         match self {
             Self::Normal => 0,
             Self::Suffix | Self::Lite => self.nonce_size(),
+            Self::Aes256Gcm | Self::XChaCha20Poly1305 =>
+                self.nonce_size() + self.encryption_tag_len(),
         }
+    }
+
+    /// Returns x
+    #[must_use]
+    pub fn tag_suffix_len(self) -> usize {
+        match self {
+            Self::Normal | Self::Suffix | Self::Lite => 0,
+            Self::Aes256Gcm | Self::XChaCha20Poly1305 => self.encryption_tag_len(),
+        }
+    }
+
+    #[must_use]
+    /// Return the number of additional bytes used to store the authentication
+    /// tag for the encryption mode.
+    pub fn encryption_tag_len(self) -> usize {
+        self.algorithm().encryption_tag_len()
     }
 
     /// Calculates the number of additional bytes required compared
     /// to an unencrypted payload.
     #[must_use]
     pub fn payload_overhead(self) -> usize {
-        Self::payload_prefix_len() + self.payload_suffix_len()
+        self.payload_prefix_len2() + self.payload_suffix_len()
     }
 
     /// Extracts the byte slice in a packet used as the nonce, and the remaining mutable
@@ -236,13 +409,13 @@ impl CryptoMode {
     ) -> Result<(&'a [u8], &'a mut [u8]), CryptoError> {
         match self {
             Self::Normal => Ok((header, body)),
-            Self::Suffix | Self::Lite => {
+            Self::Suffix | Self::Lite | Self::Aes256Gcm | Self::XChaCha20Poly1305 => {
                 let len = body.len();
                 if len < self.payload_suffix_len() {
                     Err(CryptoError)
                 } else {
-                    let (body_left, nonce_loc) = body.split_at_mut(len - self.payload_suffix_len());
-                    Ok((&nonce_loc[..self.nonce_size()], body_left))
+                    let (body_left, nonce_loc) = body.split_at_mut(len - self.nonce_size());
+                    Ok((nonce_loc, body_left))
                 }
             },
         }
@@ -265,9 +438,9 @@ impl CryptoMode {
         let (header, body) = packet.packet_mut().split_at_mut(header_len);
         let (slice_to_use, body_remaining) = self.nonce_slice(header, body)?;
 
-        let mut nonce = Nonce::default();
+        let mut nonce = XNonce::default();
         let nonce_slice = if slice_to_use.len() == NONCE_SIZE {
-            Nonce::from_slice(&slice_to_use[..NONCE_SIZE])
+            XNonce::from_slice(&slice_to_use[..NONCE_SIZE])
         } else {
             let max_bytes_avail = slice_to_use.len();
             nonce[..self.nonce_size().min(max_bytes_avail)].copy_from_slice(slice_to_use);
@@ -304,9 +477,9 @@ impl CryptoMode {
         let (header, body) = packet.packet_mut().split_at_mut(header_len);
         let (slice_to_use, body_remaining) = self.nonce_slice(header, &mut body[..payload_len])?;
 
-        let mut nonce = Nonce::default();
+        let mut nonce = XNonce::default();
         let nonce_slice = if slice_to_use.len() == NONCE_SIZE {
-            Nonce::from_slice(&slice_to_use[..NONCE_SIZE])
+            XNonce::from_slice(&slice_to_use[..NONCE_SIZE])
         } else {
             nonce[..self.nonce_size()].copy_from_slice(slice_to_use);
             &nonce
@@ -353,11 +526,13 @@ pub enum CryptoState {
     Lite(Wrapping<u32>),
 }
 
+#[allow(deprecated)]
 impl From<CryptoMode> for CryptoState {
     fn from(val: CryptoMode) -> Self {
         match val {
-            CryptoMode::Aes256Gcm => CryptoState::Lite(Wrapping(rand::random::<u32>()))
-            CryptoMode::XChaCha20Poly1305 => CryptoState::Lite(Wrapping(rand::random::<u32>()))
+            CryptoMode::Aes256Gcm => CryptoState::Aes256Gcm(Wrapping(rand::random::<u32>())),
+            CryptoMode::XChaCha20Poly1305 =>
+                CryptoState::XChaCha20Poly1305(Wrapping(rand::random::<u32>())),
             CryptoMode::Normal => CryptoState::Normal,
             CryptoMode::Suffix => CryptoState::Suffix,
             CryptoMode::Lite => CryptoState::Lite(Wrapping(rand::random::<u32>())),
@@ -374,20 +549,23 @@ impl CryptoState {
     ) -> usize {
         let mode = self.kind();
         let endpoint = payload_end + mode.payload_suffix_len();
+        let startpoint = endpoint - mode.nonce_size();
 
         match self {
             Self::Suffix => {
-                rand::thread_rng().fill(&mut packet.payload_mut()[payload_end..endpoint]);
+                rand::thread_rng().fill(&mut packet.payload_mut()[startpoint..endpoint]);
             },
-            Self::Lite(mut i) => {
-                (&mut packet.payload_mut()[payload_end..endpoint])
-                    .write_u32::<NetworkEndian>(i.0)
-                    .expect(
-                        "Nonce size is guaranteed to be sufficient to write u32 for lite tagging.",
-                    );
-                i += Wrapping(1);
+            Self::Lite(ref mut i)
+            | Self::Aes256Gcm(ref mut i)
+            | Self::XChaCha20Poly1305(ref mut i) => {
+                let mut mslice = &mut packet.payload_mut()[startpoint..endpoint];
+                println!("think I'm writing nonce to {:?} (sz4)", mslice.as_ptr());
+                mslice.write_u32::<NetworkEndian>(i.0).expect(
+                    "Nonce size is guaranteed to be sufficient to write u32 for lite tagging.",
+                );
+                *i += Wrapping(1);
             },
-            _ => {},
+            Self::Normal => {},
         }
 
         endpoint

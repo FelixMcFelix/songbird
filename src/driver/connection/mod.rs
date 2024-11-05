@@ -3,6 +3,7 @@ pub mod error;
 #[cfg(feature = "receive")]
 use super::tasks::udp_rx;
 use super::{
+    crypto::NuCipher as Cipher,
     tasks::{
         message::*,
         ws::{self as ws_task, AuxNetwork},
@@ -20,7 +21,6 @@ use crate::{
     ws::WsStream,
     ConnectionInfo,
 };
-use crypto_secretbox::{KeyInit, XSalsa20Poly1305 as Cipher};
 use discortp::discord::{IpDiscoveryPacket, IpDiscoveryType, MutableIpDiscoveryPacket};
 use error::{Error, Result};
 use flume::Sender;
@@ -103,9 +103,12 @@ impl Connection {
         let ready =
             ready.expect("Ready packet expected in connection initialisation, but not found.");
 
-        if !has_valid_mode(&ready.modes, config.crypto_mode) {
-            return Err(Error::CryptoModeUnavailable);
-        }
+        let chosen_crypto = CryptoMode::negotiate(&ready.modes, Some(config.crypto_mode))?;
+
+        println!(
+            "wanted {:?}. chose {:?} from modes {:?}",
+            config.crypto_mode, chosen_crypto, ready.modes
+        );
 
         let udp = UdpSocket::bind("0.0.0.0:0").await?;
 
@@ -169,14 +172,14 @@ impl Connection {
                     protocol: "udp".into(),
                     data: ProtocolData {
                         address,
-                        mode: config.crypto_mode.to_request_str().into(),
+                        mode: chosen_crypto.to_request_str().into(),
                         port: view.get_port(),
                     },
                 }))
                 .await?;
         }
 
-        let cipher = init_cipher(&mut client, config.crypto_mode).await?;
+        let cipher = init_cipher(&mut client, chosen_crypto).await?;
 
         info!("Connected to: {}", info.endpoint);
 
@@ -349,7 +352,8 @@ async fn init_cipher(client: &mut WsStream, mode: CryptoMode) -> Result<Cipher> 
                     return Err(Error::CryptoModeInvalid);
                 }
 
-                return Cipher::new_from_slice(&desc.secret_key)
+                return mode
+                    .cipher_from_key(&desc.secret_key)
                     .map_err(|_| Error::CryptoInvalidLength);
             },
             other => {
