@@ -212,8 +212,6 @@ impl Default for Config {
         Self {
             #[cfg(feature = "driver")]
             crypto_mode: CryptoMode::Aes256Gcm,
-            // crypto_mode: CryptoMode::XChaCha20Poly1305,
-            // crypto_mode: CryptoMode::Normal,
             #[cfg(all(feature = "driver", feature = "receive"))]
             decode_mode: DecodeMode::Decrypt,
             #[cfg(all(feature = "driver", feature = "receive"))]

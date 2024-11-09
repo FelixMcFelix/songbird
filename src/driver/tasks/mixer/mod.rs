@@ -529,8 +529,6 @@ impl Mixer {
             out
         };
 
-        println!("mixed: {mix_len:?}");
-
         if self.muted {
             mix_len = MixType::MixedPcm(0);
         }
@@ -689,8 +687,6 @@ impl Mixer {
             .conn_active
             .as_ref()
             .expect("Shouldn't be mixing packets without access to a cipher + UDP dest.");
-
-        println!("sent pkt (l{}) {:0x?}", packet.len(), packet);
 
         #[cfg(test)]
         if let Some(OutputMode::Rtp(tx)) = &self.config.override_connection {

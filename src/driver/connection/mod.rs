@@ -105,8 +105,8 @@ impl Connection {
 
         let chosen_crypto = CryptoMode::negotiate(&ready.modes, Some(config.crypto_mode))?;
 
-        println!(
-            "wanted {:?}. chose {:?} from modes {:?}",
+        info!(
+            "Crypto scheme negotiation -- wanted {:?}. Chose {:?} from modes {:?}.",
             config.crypto_mode, chosen_crypto, ready.modes
         );
 
@@ -118,7 +118,7 @@ impl Connection {
         } else {
             let socket = Socket::from(udp.into_std()?);
 
-            // Some operating systems does not allow setting the recv buffer to 0.
+            // Some operating systems do not allow setting the recv buffer to 0.
             #[cfg(any(target_os = "linux", target_os = "windows"))]
             socket.set_recv_buffer_size(0)?;
 
@@ -162,10 +162,7 @@ impl Connection {
             let address_str = std::str::from_utf8(&view.get_address_raw()[..nul_byte_index])
                 .map_err(|_| Error::IllegalIp)?;
 
-            let address = IpAddr::from_str(address_str).map_err(|e| {
-                println!("{e:?}");
-                Error::IllegalIp
-            })?;
+            let address = IpAddr::from_str(address_str).map_err(|_| Error::IllegalIp)?;
 
             client
                 .send_json(&GatewayEvent::from(SelectProtocol {
@@ -183,7 +180,7 @@ impl Connection {
 
         info!("Connected to: {}", info.endpoint);
 
-        info!("WS heartbeat duration {}ms.", hello.heartbeat_interval,);
+        info!("WS heartbeat duration {}ms.", hello.heartbeat_interval);
 
         let (ws_msg_tx, ws_msg_rx) = flume::unbounded();
         #[cfg(feature = "receive")]

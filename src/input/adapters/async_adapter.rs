@@ -254,7 +254,6 @@ impl Read for AsyncAdapterStream {
                     self.check_dropped()?;
                 },
                 a => {
-                    println!("Misc err {a:?}");
                     return a;
                 },
             }

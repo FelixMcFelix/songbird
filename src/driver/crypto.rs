@@ -63,29 +63,8 @@ impl NuCipher {
     ) -> Result<(), CryptoError> {
         let header_len = packet.packet().len() - packet.payload().len();
 
-        println!(
-            "Think I have payl_len {payload_len}, pkt {} non-hdr {} (hdr {header_len}). splits pre {} post {}",
-            packet.packet().len(),
-            packet.payload().len(),
-            mode.payload_prefix_len2(),
-            mode.payload_suffix_len(),
-        );
-
         let (header, body) = packet.packet_mut().split_at_mut(header_len);
         let (slice_to_use, body_remaining) = mode.nonce_slice(header, &mut body[..payload_len])?;
-
-        println!(
-            "Question time. nonce_slice {:0x?} (l{}) body {:0x?} (l{})",
-            slice_to_use,
-            slice_to_use.len(),
-            body_remaining,
-            body_remaining.len(),
-        );
-
-        println!(
-            "think I'm reading nonce from {:?} (sz4)",
-            slice_to_use.as_ptr()
-        );
 
         // body_remaining is now correctly truncated to exclude the nonce by this point.
         // the true_payload to encrypt is within the buf[prefix:-suffix].
@@ -95,9 +74,9 @@ impl NuCipher {
 
         // All these Nonce types are distinct at the type level
         // (96b for AES, 192b for XSalsa/XChaCha).
-        // TODO: E2EE apparently wants the least significant bytes used.
-        //       This scheme uses most significant bytes.
         match self {
+            // Older modes place the tag before the payload and do not authenticate
+            // cleartext.
             NuCipher::XSalsa20Poly1305(secret_box) => {
                 let mut nonce = SbNonce::default();
                 nonce[..mode.nonce_size()].copy_from_slice(slice_to_use);
@@ -105,13 +84,14 @@ impl NuCipher {
                 let tag = secret_box.encrypt_in_place_detached(&nonce, b"", body)?;
                 pre_payload[..TAG_SIZE].copy_from_slice(&tag[..]);
             },
+
+            // The below variants follow part of the SRTP spec (RFC3711, sec 3.1)
+            // by requiring that we include the cleartext header portion as
+            // authenticated data. Discord themselves do not mention this requirement.
             NuCipher::Aes256Gcm(aes_gcm) => {
                 let mut nonce = AesNonce::default();
                 nonce[..mode.nonce_size()].copy_from_slice(slice_to_use);
-                // let l = nonce.len();
-                // nonce[l-mode.nonce_size()..].copy_from_slice(slice_to_use);
 
-                // let tag = aes_gcm.encrypt_in_place_detached(&nonce, b"", body)?;
                 let tag = aes_gcm.encrypt_in_place_detached(&nonce, header, body)?;
                 post_payload[..TAG_SIZE].copy_from_slice(&tag[..]);
             },
@@ -119,7 +99,6 @@ impl NuCipher {
                 let mut nonce = XNonce::default();
                 nonce[..mode.nonce_size()].copy_from_slice(slice_to_use);
 
-                // let tag = cha_cha_poly1305.encrypt_in_place_detached(&nonce, b"", body)?;
                 let tag = cha_cha_poly1305.encrypt_in_place_detached(&nonce, header, body)?;
                 post_payload[..TAG_SIZE].copy_from_slice(&tag[..]);
             },
@@ -140,7 +119,8 @@ pub enum CryptoMode {
     /// An additional random 4B suffix is used as the source of nonce bytes for the packet.
     /// This nonce value increments by `1` with each packet.
     ///
-    /// Encrypted content begins *after* the RTP header, following the SRTP specification.
+    /// Encrypted content begins *after* the RTP header and extensions, following the SRTP
+    /// specification.
     ///
     /// Nonce width of 4B (32b), at an extra 4B per packet (~0.2 kB/s).
     Aes256Gcm,
@@ -150,7 +130,8 @@ pub enum CryptoMode {
     /// An additional random 4B suffix is used as the source of nonce bytes for the packet.
     /// This nonce value increments by `1` with each packet.
     ///
-    /// Encrypted content begins *after* the RTP header, following the SRTP specification.
+    /// Encrypted content begins *after* the RTP header and extensions, following the SRTP
+    /// specification.
     ///
     /// Nonce width of 4B (32b), at an extra 4B per packet (~0.2 kB/s).
     XChaCha20Poly1305,
@@ -558,11 +539,11 @@ impl CryptoState {
             Self::Lite(ref mut i)
             | Self::Aes256Gcm(ref mut i)
             | Self::XChaCha20Poly1305(ref mut i) => {
-                let mut mslice = &mut packet.payload_mut()[startpoint..endpoint];
-                println!("think I'm writing nonce to {:?} (sz4)", mslice.as_ptr());
-                mslice.write_u32::<NetworkEndian>(i.0).expect(
-                    "Nonce size is guaranteed to be sufficient to write u32 for lite tagging.",
-                );
+                (&mut packet.payload_mut()[startpoint..endpoint])
+                    .write_u32::<NetworkEndian>(i.0)
+                    .expect(
+                        "Nonce size is guaranteed to be sufficient to write u32 for lite tagging.",
+                    );
                 *i += Wrapping(1);
             },
             Self::Normal => {},
