@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `src/driver/tasks/mixer/mod.rs`."><title>mod.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-46f98efaafac5295.ttf.woff2,FiraSans-Regular-018c141bf0843ffd.woff2,FiraSans-Medium-8f9a781e4970d388.woff2,SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2,SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../../../static.files/rustdoc-6d8951b3ccd3cbca.css"><meta name="rustdoc-vars" data-root-path="../../../../../" data-static-root-path="../../../../../static.files/" data-current-crate="songbird" data-themes="" data-resource-suffix="" data-rustdoc-version="1.83.0-nightly (9096f4faf 2024-10-05)" data-channel="nightly" data-search-js="search-e056c65ede92db13.js" data-settings-js="settings-805db61a62df4bd2.js" ><script src="../../../../../static.files/storage-1d39b6787ed640ff.js"></script><script defer src="../../../../../static.files/src-script-e66d777a5a92e9b2.js"></script><script defer src="../../../../../src-files.js"></script><script defer src="../../../../../static.files/main-f070b9041d14864c.js"></script><noscript><link rel="stylesheet" href="../../../../../static.files/noscript-0111fcff984fae8f.css"></noscript><link rel="icon" href="https://raw.githubusercontent.com/serenity-rs/songbird/current/songbird-ico.png"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer"></div><main><rustdoc-search></rustdoc-search><section id="main-content" class="content"><div class="main-heading"><h1><div class="sub-heading">songbird/driver/tasks/mixer/</div>mod.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers">
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `src/driver/tasks/mixer/mod.rs`."><title>mod.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../../../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../../../../static.files/rustdoc-42caa33d.css"><meta name="rustdoc-vars" data-root-path="../../../../../" data-static-root-path="../../../../../static.files/" data-current-crate="songbird" data-themes="" data-resource-suffix="" data-rustdoc-version="1.84.0-nightly (f7273e004 2024-11-12)" data-channel="nightly" data-search-js="search-853ef39b.js" data-settings-js="settings-0f613d39.js" ><script src="../../../../../static.files/storage-59e33391.js"></script><script defer src="../../../../../static.files/src-script-56102188.js"></script><script defer src="../../../../../src-files.js"></script><script defer src="../../../../../static.files/main-5f194d8c.js"></script><noscript><link rel="stylesheet" href="../../../../../static.files/noscript-893ab5e7.css"></noscript><link rel="icon" href="https://raw.githubusercontent.com/serenity-rs/songbird/current/songbird-ico.png"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer"></div><main><rustdoc-search></rustdoc-search><section id="main-content" class="content"><div class="main-heading"><h1><div class="sub-heading">songbird/driver/tasks/mixer/</div>mod.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers">
 <a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
@@ -865,7 +865,15 @@
 <a href="#864" id="864">864</a>
 <a href="#865" id="865">865</a>
 <a href="#866" id="866">866</a>
-<a href="#867" id="867">867</a></pre></div><pre class="rust"><code><span class="kw">pub mod </span>mix_logic;
+<a href="#867" id="867">867</a>
+<a href="#868" id="868">868</a>
+<a href="#869" id="869">869</a>
+<a href="#870" id="870">870</a>
+<a href="#871" id="871">871</a>
+<a href="#872" id="872">872</a>
+<a href="#873" id="873">873</a>
+<a href="#874" id="874">874</a>
+<a href="#875" id="875">875</a></pre></div><pre class="rust"><code><span class="kw">pub mod </span>mix_logic;
 <span class="kw">mod </span>pool;
 <span class="kw">mod </span>result;
 <span class="kw">pub mod </span>state;
@@ -882,10 +890,9 @@
     error::{Error, <span class="prelude-ty">Result</span>},
     message::<span class="kw-2">*</span>,
 };
-<span class="kw">use </span><span class="kw">crate</span>::driver::crypto::TAG_SIZE;
 <span class="kw">use crate</span>::{
     constants::<span class="kw-2">*</span>,
-    driver::MixMode,
+    driver::{CryptoMode, MixMode},
     events::EventStore,
     input::{Input, Parsed},
     tracks::{Action, LoopState, PlayError, PlayMode, TrackCommand, TrackHandle, TrackState, View},
@@ -1378,6 +1385,15 @@
         }
     }
 
+    <span class="kw">pub fn </span>crypto_mode(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; CryptoMode {
+        <span class="kw">let </span>mode = <span class="self">self</span>.conn_active.as_ref().map(|v| v.crypto_state.kind());
+        <span class="kw">if </span><span class="macro">cfg!</span>(not(test)) {
+            mode.expect(<span class="string">"Shouldn't be mixing packets without access to a cipher + UDP dest."</span>)
+        } <span class="kw">else </span>{
+            mode.unwrap_or_else(|| <span class="self">self</span>.config.crypto_mode)
+        }
+    }
+
     <span class="attr">#[inline]
     </span><span class="kw">pub fn </span>mix_and_build_packet(<span class="kw-2">&amp;mut </span><span class="self">self</span>, packet: <span class="kw-2">&amp;mut </span>[u8]) -&gt; <span class="prelude-ty">Result</span>&lt;usize&gt; {
         <span class="comment">// symph_mix is an `AudioBuffer` (planar format), we need to convert this
@@ -1412,8 +1428,9 @@
                 );
 
                 <span class="kw">let </span>payload = rtp.payload_mut();
+                <span class="kw">let </span>pre_len = <span class="self">self</span>.crypto_mode().payload_prefix_len2();
 
-                payload[TAG_SIZE..TAG_SIZE + SILENT_FRAME.len()].copy_from_slice(<span class="kw-2">&amp;</span>SILENT_FRAME[..]);
+                payload[pre_len..pre_len + SILENT_FRAME.len()].copy_from_slice(<span class="kw-2">&amp;</span>SILENT_FRAME[..]);
 
                 mix_len = MixType::Passthrough(SILENT_FRAME.len());
             } <span class="kw">else </span>{
@@ -1447,7 +1464,8 @@
                             (Blame: VOICE_PACKET_MAX?)"</span>,
                     );
                     <span class="kw">let </span>payload = rtp.payload();
-                    <span class="kw">let </span>opus_frame = (payload[TAG_SIZE..][..len]).to_vec();
+                    <span class="kw">let </span>opus_frame =
+                        (payload[<span class="self">self</span>.crypto_mode().payload_prefix_len2()..][..len]).to_vec();
 
                     OutputMessage::Passthrough(opus_frame)
                 },
@@ -1493,6 +1511,7 @@
 
         <span class="kw">let </span>payload = rtp.payload_mut();
         <span class="kw">let </span>crypto_mode = conn.crypto_state.kind();
+        <span class="kw">let </span>first_payload_byte = crypto_mode.payload_prefix_len2();
 
         <span class="comment">// If passthrough, Opus payload in place already.
         // Else encode into buffer with space for AEAD encryption headers.
@@ -1502,14 +1521,14 @@
                 <span class="kw">let </span>total_payload_space = payload.len() - crypto_mode.payload_suffix_len();
                 <span class="self">self</span>.encoder.encode_float(
                     <span class="kw-2">&amp;</span>send_buffer[..<span class="self">self</span>.config.mix_mode.sample_count_in_frame()],
-                    <span class="kw-2">&amp;mut </span>payload[TAG_SIZE..total_payload_space],
+                    <span class="kw-2">&amp;mut </span>payload[first_payload_byte..total_payload_space],
                 )<span class="question-mark">?
             </span>},
         };
 
         <span class="kw">let </span>final_payload_size = conn
             .crypto_state
-            .write_packet_nonce(<span class="kw-2">&amp;mut </span>rtp, TAG_SIZE + payload_len);
+            .write_packet_nonce(<span class="kw-2">&amp;mut </span>rtp, first_payload_byte + payload_len);
 
         <span class="comment">// Packet encryption ignored in test modes.
         </span><span class="attr">#[cfg(not(test))]
@@ -1518,11 +1537,8 @@
         </span><span class="kw">let </span>encrypt = <span class="self">self</span>.config.override_connection.is_none();
 
         <span class="kw">if </span>encrypt {
-            conn.crypto_state.kind().encrypt_in_place(
-                <span class="kw-2">&amp;mut </span>rtp,
-                <span class="kw-2">&amp;</span>conn.cipher,
-                final_payload_size,
-            )<span class="question-mark">?</span>;
+            conn.cipher
+                .encrypt_pkt_in_place(<span class="kw-2">&amp;mut </span>rtp, final_payload_size)<span class="question-mark">?</span>;
         }
 
         <span class="prelude-val">Ok</span>(RtpPacket::minimum_packet_size() + final_payload_size)
@@ -1613,7 +1629,7 @@
                 (Blame: VOICE_PACKET_MAX?)"</span>,
         );
         <span class="kw">let </span>payload = rtp.payload_mut();
-        <span class="kw">let </span>opus_frame = <span class="kw-2">&amp;mut </span>payload[TAG_SIZE..];
+        <span class="kw">let </span>opus_frame = <span class="kw-2">&amp;mut </span>payload[<span class="self">self</span>.crypto_mode().payload_prefix_len2()..];
 
         <span class="comment">// Opus frame passthrough.
         // This requires that we have only one PLAYING track, who has volume 1.0, and an

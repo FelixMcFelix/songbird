@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `src/driver/tasks/udp_rx/mod.rs`."><title>mod.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-46f98efaafac5295.ttf.woff2,FiraSans-Regular-018c141bf0843ffd.woff2,FiraSans-Medium-8f9a781e4970d388.woff2,SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2,SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../../../static.files/rustdoc-6d8951b3ccd3cbca.css"><meta name="rustdoc-vars" data-root-path="../../../../../" data-static-root-path="../../../../../static.files/" data-current-crate="songbird" data-themes="" data-resource-suffix="" data-rustdoc-version="1.83.0-nightly (9096f4faf 2024-10-05)" data-channel="nightly" data-search-js="search-e056c65ede92db13.js" data-settings-js="settings-805db61a62df4bd2.js" ><script src="../../../../../static.files/storage-1d39b6787ed640ff.js"></script><script defer src="../../../../../static.files/src-script-e66d777a5a92e9b2.js"></script><script defer src="../../../../../src-files.js"></script><script defer src="../../../../../static.files/main-f070b9041d14864c.js"></script><noscript><link rel="stylesheet" href="../../../../../static.files/noscript-0111fcff984fae8f.css"></noscript><link rel="icon" href="https://raw.githubusercontent.com/serenity-rs/songbird/current/songbird-ico.png"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer"></div><main><rustdoc-search></rustdoc-search><section id="main-content" class="content"><div class="main-heading"><h1><div class="sub-heading">songbird/driver/tasks/udp_rx/</div>mod.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers">
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `src/driver/tasks/udp_rx/mod.rs`."><title>mod.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../../../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../../../../static.files/rustdoc-42caa33d.css"><meta name="rustdoc-vars" data-root-path="../../../../../" data-static-root-path="../../../../../static.files/" data-current-crate="songbird" data-themes="" data-resource-suffix="" data-rustdoc-version="1.84.0-nightly (f7273e004 2024-11-12)" data-channel="nightly" data-search-js="search-853ef39b.js" data-settings-js="settings-0f613d39.js" ><script src="../../../../../static.files/storage-59e33391.js"></script><script defer src="../../../../../static.files/src-script-56102188.js"></script><script defer src="../../../../../src-files.js"></script><script defer src="../../../../../static.files/main-5f194d8c.js"></script><noscript><link rel="stylesheet" href="../../../../../static.files/noscript-893ab5e7.css"></noscript><link rel="icon" href="https://raw.githubusercontent.com/serenity-rs/songbird/current/songbird-ico.png"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer"></div><main><rustdoc-search></rustdoc-search><section id="main-content" class="content"><div class="main-heading"><h1><div class="sub-heading">songbird/driver/tasks/udp_rx/</div>mod.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers">
 <a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
@@ -266,21 +266,25 @@
 <a href="#265" id="265">265</a>
 <a href="#266" id="266">266</a>
 <a href="#267" id="267">267</a>
-<a href="#268" id="268">268</a></pre></div><pre class="rust"><code><span class="kw">mod </span>decode_sizes;
+<a href="#268" id="268">268</a>
+<a href="#269" id="269">269</a>
+<a href="#270" id="270">270</a>
+<a href="#271" id="271">271</a>
+<a href="#272" id="272">272</a></pre></div><pre class="rust"><code><span class="kw">mod </span>decode_sizes;
 <span class="kw">mod </span>playout_buffer;
 <span class="kw">mod </span>ssrc_state;
 
 <span class="kw">use </span><span class="self">self</span>::{decode_sizes::<span class="kw-2">*</span>, playout_buffer::<span class="kw-2">*</span>, ssrc_state::<span class="kw-2">*</span>};
 
 <span class="kw">use </span><span class="kw">super</span>::message::<span class="kw-2">*</span>;
+<span class="kw">use </span><span class="kw">crate</span>::driver::CryptoMode;
 <span class="kw">use crate</span>::{
     constants::<span class="kw-2">*</span>,
-    driver::CryptoMode,
+    driver::crypto::Cipher,
     events::{context_data::VoiceTick, internal_data::<span class="kw-2">*</span>, CoreContext},
     Config,
 };
 <span class="kw">use </span>bytes::BytesMut;
-<span class="kw">use </span>crypto_secretbox::XSalsa20Poly1305 <span class="kw">as </span>Cipher;
 <span class="kw">use </span>discortp::{
     demux::{<span class="self">self</span>, DemuxedMut},
     rtp::RtpPacket,
@@ -301,6 +305,7 @@
 
 <span class="kw">struct </span>UdpRx {
     cipher: Cipher,
+    crypto_mode: CryptoMode,
     decoder_map: HashMap&lt;RtpSsrc, SsrcState&gt;,
     config: Config,
     rx: Receiver&lt;UdpRxMessage&gt;,
@@ -411,7 +416,7 @@
         // For simplicity, if the event task fails then we nominate the mixing thread
         // to rebuild their context etc. (hence, the `let _ =` statements.), as it will
         // try to make contact every 20ms.
-        </span><span class="kw">let </span>crypto_mode = <span class="self">self</span>.config.crypto_mode;
+        </span><span class="kw">let </span>crypto_mode = <span class="self">self</span>.crypto_mode;
 
         <span class="kw">match </span>demux::demux_mut(packet.as_mut()) {
             DemuxedMut::Rtp(<span class="kw-2">mut </span>rtp) =&gt; {
@@ -421,11 +426,12 @@
                 }
 
                 <span class="kw">let </span>packet_data = <span class="kw">if </span><span class="self">self</span>.config.decode_mode.should_decrypt() {
-                    <span class="kw">let </span>out = crypto_mode
-                        .decrypt_in_place(<span class="kw-2">&amp;mut </span>rtp, <span class="kw-2">&amp;</span><span class="self">self</span>.cipher)
+                    <span class="kw">let </span>out = <span class="self">self
+                        </span>.cipher
+                        .decrypt_rtp_in_place(<span class="kw-2">&amp;mut </span>rtp)
                         .map(|(s, t)| (s, t, <span class="bool-val">true</span>));
 
-                    <span class="kw">if let </span><span class="prelude-val">Err</span>(e) = out {
+                    <span class="kw">if let </span><span class="prelude-val">Err</span>(<span class="kw-2">ref </span>e) = out {
                         <span class="macro">warn!</span>(<span class="string">"RTP decryption failed: {:?}"</span>, e);
                     }
 
@@ -437,7 +443,7 @@
                 <span class="kw">let </span>rtp = rtp.to_immutable();
                 <span class="kw">let </span>(rtp_body_start, rtp_body_tail, decrypted) = packet_data.unwrap_or_else(|| {
                     (
-                        CryptoMode::payload_prefix_len(),
+                        crypto_mode.payload_prefix_len2(),
                         crypto_mode.payload_suffix_len(),
                         <span class="bool-val">false</span>,
                     )
@@ -446,7 +452,7 @@
                 <span class="kw">let </span>entry = <span class="self">self
                     </span>.decoder_map
                     .entry(rtp.get_ssrc())
-                    .or_insert_with(|| SsrcState::new(<span class="kw-2">&amp;</span>rtp, <span class="kw-2">&amp;</span><span class="self">self</span>.config));
+                    .or_insert_with(|| SsrcState::new(<span class="kw-2">&amp;</span>rtp, crypto_mode, <span class="kw-2">&amp;</span><span class="self">self</span>.config));
 
                 <span class="comment">// Only do this on RTP, rather than RTCP -- this pins decoder state liveness
                 // to *speech* rather than just presence.
@@ -469,9 +475,9 @@
             },
             DemuxedMut::Rtcp(<span class="kw-2">mut </span>rtcp) =&gt; {
                 <span class="kw">let </span>packet_data = <span class="kw">if </span><span class="self">self</span>.config.decode_mode.should_decrypt() {
-                    <span class="kw">let </span>out = crypto_mode.decrypt_in_place(<span class="kw-2">&amp;mut </span>rtcp, <span class="kw-2">&amp;</span><span class="self">self</span>.cipher);
+                    <span class="kw">let </span>out = <span class="self">self</span>.cipher.decrypt_rtcp_in_place(<span class="kw-2">&amp;mut </span>rtcp);
 
-                    <span class="kw">if let </span><span class="prelude-val">Err</span>(e) = out {
+                    <span class="kw">if let </span><span class="prelude-val">Err</span>(<span class="kw-2">ref </span>e) = out {
                         <span class="macro">warn!</span>(<span class="string">"RTCP decryption failed: {:?}"</span>, e);
                     }
 
@@ -482,7 +488,7 @@
 
                 <span class="kw">let </span>(start, tail) = packet_data.unwrap_or_else(|| {
                     (
-                        CryptoMode::payload_prefix_len(),
+                        crypto_mode.payload_prefix_len2(),
                         crypto_mode.payload_suffix_len(),
                     )
                 });
@@ -510,6 +516,7 @@
     <span class="kw-2">mut </span>interconnect: Interconnect,
     rx: Receiver&lt;UdpRxMessage&gt;,
     cipher: Cipher,
+    crypto_mode: CryptoMode,
     config: Config,
     udp_socket: UdpSocket,
     ssrc_signalling: Arc&lt;SsrcTracker&gt;,
@@ -518,6 +525,7 @@
 
     <span class="kw">let </span><span class="kw-2">mut </span>state = UdpRx {
         cipher,
+        crypto_mode,
         decoder_map: HashMap::new(),
         config,
         rx,
